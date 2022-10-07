@@ -1,0 +1,29 @@
+{
+  "name": "strn",
+  "version": "0.0.0",
+  "description": "Filecoin Saturn Client",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": [
+    "filecoin",
+    "saturn",
+    "client",
+    "retrieval"
+  ],
+  "author": {
+    "name": "Filecoin Saturn Team",
+    "email": "saturn@protocol.ai"
+  },
+  "license": "(MIT OR Apache-2.0)",
+  "dependencies": {
+    "@ipld/car": "^4.1.5",
+    "@ipld/dag-cbor": "^7.0.3",
+    "@ipld/dag-json": "^8.0.11",
+    "@ipld/dag-pb": "^2.1.18",
+    "@multiformats/blake2": "^1.0.11",
+    "multiformats": "^9.9.0"
+  }
+}
