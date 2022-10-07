@@ -1,7 +1,8 @@
-import assert from 'node:assert/strict';
-import { randomUUID } from "node:crypto"
+import assert from 'node:assert/strict'
+import { randomUUID } from 'node:crypto'
 import { describe, it } from 'node:test'
-import Saturn from './index.js'
+
+import Saturn from '../src/index.js'
 
 describe('Saturn client', () => {
   describe('constructor', () => {

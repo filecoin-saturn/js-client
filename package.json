@@ -2,10 +2,12 @@
   "name": "strn",
   "version": "0.0.0",
   "description": "Filecoin Saturn Client",
-  "main": "index.js",
+  "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "test": "node test.js"
+    "test": "node test/test.js",
+    "build": "webpack --mode production",
+    "prepublish": "npm run build"
   },
   "keywords": [
     "filecoin",
@@ -25,5 +27,20 @@
     "@ipld/dag-pb": "^2.1.18",
     "@multiformats/blake2": "^1.0.11",
     "multiformats": "^9.9.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.24.0",
+    "eslint-config-ipfs": "^3.1.1",
+    "eslint-plugin-jsdoc": "^39.3.6",
+    "eslint-plugin-promise": "^6.0.1",
+    "webpack": "^5.74.0",
+    "webpack-cli": "^4.10.0"
+  },
+  "eslintConfig": {
+    "extends": "ipfs",
+    "parserOptions": {
+      "ecmaVersion": "latest",
+      "sourceType": "module"
+    }
   }
 }

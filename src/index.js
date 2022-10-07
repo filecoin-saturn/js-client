@@ -1,8 +1,8 @@
-import { randomUUID } from 'node:crypto'
-import { setTimeout as setTimeoutPromise } from 'node:timers/promises'
 import { CID } from 'multiformats'
 
 import { validateBody } from './utils/car.js'
+import { setTimeoutPromise } from './utils/timers.js'
+import { randomUUID } from './utils/uuid.js'
 
 class Saturn {
   /**
@@ -18,7 +18,7 @@ class Saturn {
       clientId: randomUUID(),
       cdnURL: 'strn.pl',
       connectTimeout: 5_000,
-      downloadTimeout: 0,
+      downloadTimeout: 0
     }, opts)
   }
 
