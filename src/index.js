@@ -125,7 +125,7 @@ class Saturn {
 
   reportLogs () {
     this.reportLogsTimeout && clearTimeout(this.reportLogsTimeout)
-    this.reportLogsTimeout = setTimeout(this.reportLogs.bind(this), 10_000)
+    this.reportLogsTimeout = setTimeout(this._reportLogs.bind(this), 10_000)
   }
 
   async _reportLogs () {
