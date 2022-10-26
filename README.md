@@ -15,7 +15,7 @@ import Saturn from 'strn'
 
 const client = new Saturn()
 
-const res = client.fetchCID('...')
+const res = await client.fetchCID('...')
 ```
 
 ## License
