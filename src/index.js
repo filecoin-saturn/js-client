@@ -92,7 +92,7 @@ class Saturn {
     } finally {
       log.endTime = new Date()
 
-      if (window?.performance) {
+      if (typeof window !== 'undefined' && window?.performance) {
         const entry = performance.getEntriesByType('resource')
           .find(r => r.name === url.href)
         if (entry) {
