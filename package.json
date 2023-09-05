@@ -26,6 +26,8 @@
     "@ipld/dag-json": "^8.0.11",
     "@ipld/dag-pb": "^2.1.18",
     "@multiformats/blake2": "^1.0.11",
+    "browser-readablestream-to-it": "^2.0.4",
+    "ipfs-unixfs-exporter": "^13.1.7",
     "multiformats": "^9.9.0"
   },
   "devDependencies": {
@@ -42,5 +44,8 @@
       "ecmaVersion": "latest",
       "sourceType": "module"
     }
+  },
+  "imports": {
+    "#src/*": "./src/*"
   }
 }
