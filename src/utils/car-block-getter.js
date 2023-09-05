@@ -1,5 +1,6 @@
 import { CarBlockIterator } from '@ipld/car/iterator'
 import toIterable from 'browser-readablestream-to-it'
+import { CID } from 'multiformats/cid'
 
 import { verifyBlock } from './car.js'
 import { promiseTimeout } from './timers.js'
@@ -23,6 +24,7 @@ export class CarBlockGetter {
   }
 
   async get (cid, options) {
+    cid = typeof cid === 'string' ? CID.parse(cid) : cid
     const { value, done } = await promiseTimeout(
       this.carItr.next(),
       this.getBlockTimeout,
