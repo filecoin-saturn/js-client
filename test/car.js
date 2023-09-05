@@ -58,6 +58,21 @@ describe('CAR Verification', () => {
     assert.deepStrictEqual(actualContent, expectedContent)
   })
 
+  it('should traverse non-unixfs dag-cbor CARs', async () => {
+    const cidPath =
+      'bafyreibs4utpgbn7uqegmd2goqz4bkyflre2ek2iwv743fhvylwi4zeeim/foo/link/bar'
+    const filepath = './fixtures/dag-cbor-traversal.car'
+    const carStream = fs.createReadStream(filepath)
+
+    const contentItr = await extractVerifiedContent(cidPath, carStream)
+    const itr = contentItr[Symbol.asyncIterator]()
+    const actualContent = (await itr.next()).value
+    const expectedContent = { hello: 'this is not a link' }
+
+    assert.deepStrictEqual(actualContent, expectedContent)
+  })
+
+
   it('should error if CAR is missing blocks', async () => {
     const cidPath = 'bafybeigeqgfwhivuuxgmuvcrrwvs4j3yfzgljssvnuqzokm6uby4fpmwsa'
     const filepath = './fixtures/subdir.car'
