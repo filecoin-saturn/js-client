@@ -1,6 +1,7 @@
 import { CarBlockIterator } from '@ipld/car/iterator'
 import toIterable from 'browser-readablestream-to-it'
 import { CID } from 'multiformats/cid'
+import { identity } from 'multiformats/hashes/identity'
 
 import { verifyBlock } from './car.js'
 import { promiseTimeout } from './timers.js'
@@ -25,6 +26,11 @@ export class CarBlockGetter {
 
   async get (cid, options) {
     cid = typeof cid === 'string' ? CID.parse(cid) : cid
+
+    if (cid.multihash.code === identity.code) {
+      return cid.multihash.digest
+    }
+
     const { value, done } = await promiseTimeout(
       this.carItr.next(),
       this.getBlockTimeout,

@@ -44,6 +44,20 @@ describe('CAR Verification', () => {
     assert.strictEqual(actualContent, expectedContent)
   })
 
+  it('should verify identity cids', async () => {
+    const cidPath =
+      'bafyreiccg6dmxvt6twmzxtr4ujhaobrcucrsau6uopslvo5kq6n523btqi/identity'
+    const filepath = './fixtures/dag-cbor-with-identity.car'
+    const carStream = fs.createReadStream(filepath)
+
+    const contentItr = await extractVerifiedContent(cidPath, carStream)
+    const itr = contentItr[Symbol.asyncIterator]()
+    const actualContent = (await itr.next()).value
+    const expectedContent = { asdf: 324 }
+
+    assert.deepStrictEqual(actualContent, expectedContent)
+  })
+
   it('should error if CAR is missing blocks', async () => {
     const cidPath = 'bafybeigeqgfwhivuuxgmuvcrrwvs4j3yfzgljssvnuqzokm6uby4fpmwsa'
     const filepath = './fixtures/subdir.car'
