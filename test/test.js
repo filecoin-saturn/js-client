@@ -42,15 +42,15 @@ describe('Saturn client', () => {
     })
 
     it('should fail to fetch non CID', async () => {
-      assert.rejects(client.fetchCID('a'))
+      await assert.rejects(client.fetchCID('a'))
     })
 
     it('should fail when exceeding connection timeout', async () => {
-      assert.rejects(client.fetchCID('QmXjYBY478Cno4jzdCcPy4NcJYFrwHZ51xaCP8vUwN9MGm', { connectTimeout: 1 }))
+      await assert.rejects(client.fetchCID('QmXjYBY478Cno4jzdCcPy4NcJYFrwHZ51xaCP8vUwN9MGm', { connectTimeout: 1 }))
     })
 
     it('should fail when exceeding download timeout', async () => {
-      assert.rejects(client.fetchCID('QmXjYBY478Cno4jzdCcPy4NcJYFrwHZ51xaCP8vUwN9MGm', { downloadTimeout: 0 }))
+      await assert.rejects(client.fetchCID('QmXjYBY478Cno4jzdCcPy4NcJYFrwHZ51xaCP8vUwN9MGm', { downloadTimeout: 0 }))
     })
   })
 })
