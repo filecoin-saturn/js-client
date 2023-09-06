@@ -30,6 +30,9 @@ const hashes = {
   [blake2b256.code]: hasher(blake2b256)
 }
 
+const minimumHashLength = 20
+const maximumHashLength = 128
+
 /**
  * Validates a CAR file
  *
@@ -56,8 +59,17 @@ export async function verifyBlock (cid, bytes) {
   if (!codecs[cid.code]) {
     throw new VerificationError(`Unexpected codec: 0x${cid.code.toString(16)}`)
   }
+
   if (!hashes[cid.multihash.code]) {
     throw new VerificationError(`Unexpected multihash code: 0x${cid.multihash.code.toString(16)}`)
+  }
+
+  if (cid.multihash.code !== identity.code && cid.multihash.digest.length < minimumHashLength) {
+    throw new VerificationError(`Hashes must be at least ${minimumHashLength} bytes long`)
+  }
+
+  if (cid.multihash.code !== identity.code && cid.multihash.digest.length > maximumHashLength) {
+    throw new VerificationError(`Hashes must be at most ${maximumHashLength} bytes long`)
   }
 
   // Verify step 2: if we hash the bytes, do we get the same digest as
