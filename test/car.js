@@ -1,11 +1,19 @@
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { describe, it } from 'node:test'
+import { resolve, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { CarReader, CarWriter } from '@ipld/car'
 import { CID } from 'multiformats/cid'
 
 import { extractVerifiedContent } from '#src/utils/car.js'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+function getFixturePath (filename) {
+  return resolve(__dirname, `./fixtures/${filename}`)
+}
 
 async function concatChunks (itr) {
   const arr = []
@@ -19,7 +27,7 @@ describe('CAR Verification', () => {
   it('should extract content from a valid CAR', async () => {
     const cidPath =
       'bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4'
-    const filepath = './fixtures/hello.car'
+    const filepath = getFixturePath('hello.car')
     const carStream = fs.createReadStream(filepath)
 
     const contentItr = await extractVerifiedContent(cidPath, carStream)
@@ -33,7 +41,7 @@ describe('CAR Verification', () => {
   it('should verify intermediate path segments', async () => {
     const cidPath =
       'bafybeigeqgfwhivuuxgmuvcrrwvs4j3yfzgljssvnuqzokm6uby4fpmwsa/subdir/hello.txt'
-    const filepath = './fixtures/subdir.car'
+    const filepath = getFixturePath('subdir.car')
     const carStream = fs.createReadStream(filepath)
 
     const contentItr = await extractVerifiedContent(cidPath, carStream)
@@ -47,7 +55,7 @@ describe('CAR Verification', () => {
   it('should verify identity cids', async () => {
     const cidPath =
       'bafyreiccg6dmxvt6twmzxtr4ujhaobrcucrsau6uopslvo5kq6n523btqi/identity'
-    const filepath = './fixtures/dag-cbor-with-identity.car'
+    const filepath = getFixturePath('dag-cbor-with-identity.car')
     const carStream = fs.createReadStream(filepath)
 
     const contentItr = await extractVerifiedContent(cidPath, carStream)
@@ -61,7 +69,7 @@ describe('CAR Verification', () => {
   it('should traverse non-unixfs dag-cbor CARs', async () => {
     const cidPath =
       'bafyreibs4utpgbn7uqegmd2goqz4bkyflre2ek2iwv743fhvylwi4zeeim/foo/link/bar'
-    const filepath = './fixtures/dag-cbor-traversal.car'
+    const filepath = getFixturePath('dag-cbor-traversal.car')
     const carStream = fs.createReadStream(filepath)
 
     const contentItr = await extractVerifiedContent(cidPath, carStream)
@@ -75,7 +83,7 @@ describe('CAR Verification', () => {
 
   it('should error if CAR is missing blocks', async () => {
     const cidPath = 'bafybeigeqgfwhivuuxgmuvcrrwvs4j3yfzgljssvnuqzokm6uby4fpmwsa'
-    const filepath = './fixtures/subdir.car'
+    const filepath = getFixturePath('subdir.car')
     const carStream = fs.createReadStream(filepath)
 
     // Create an invalid CAR that only has 1 block but should have 3
@@ -101,7 +109,7 @@ describe('CAR Verification', () => {
 
   it('should error if CAR blocks are in the wrong traversal order', async () => {
     const cidPath = 'bafybeigeqgfwhivuuxgmuvcrrwvs4j3yfzgljssvnuqzokm6uby4fpmwsa'
-    const filepath = './fixtures/subdir.car'
+    const filepath = getFixturePath('subdir.car')
     const carStream = fs.createReadStream(filepath)
 
     // Create an invalid CAR that has blocks in the wrong order
