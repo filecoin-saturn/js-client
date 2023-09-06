@@ -55,30 +55,32 @@ export async function validateBody (body) {
  * @param {Uint8Array} bytes
  */
 export async function verifyBlock (cid, bytes) {
+  const { code: mhCode, digest: mhDigest } = cid.multihash
+
   // Verify step 1: is this a CID we know how to deal with?
   if (!codecs[cid.code]) {
     throw new VerificationError(`Unexpected codec: 0x${cid.code.toString(16)}`)
   }
 
-  if (!hashes[cid.multihash.code]) {
-    throw new VerificationError(`Unexpected multihash code: 0x${cid.multihash.code.toString(16)}`)
+  if (!hashes[mhCode]) {
+    throw new VerificationError(`Unexpected multihash code: 0x${mhCode.toString(16)}`)
   }
 
-  if (cid.multihash.code !== identity.code && cid.multihash.digest.length < minimumHashLength) {
+  if (mhCode !== identity.code && mhDigest.length < minimumHashLength) {
     throw new VerificationError(`Hashes must be at least ${minimumHashLength} bytes long`)
   }
 
-  if (cid.multihash.code !== identity.code && cid.multihash.digest.length > maximumHashLength) {
+  if (mhCode !== identity.code && mhDigest.length > maximumHashLength) {
     throw new VerificationError(`Hashes must be at most ${maximumHashLength} bytes long`)
   }
 
   // Verify step 2: if we hash the bytes, do we get the same digest as
   // reported by the CID? Note that this step is sufficient if you just
   // want to safely verify the CAR's reported CIDs
-  const hash = await hashes[cid.multihash.code].digest(bytes)
-  if (toHex(hash.digest) !== toHex(cid.multihash.digest)) {
+  const hash = await hashes[mhCode].digest(bytes)
+  if (toHex(hash.digest) !== toHex(mhDigest)) {
     throw new VerificationError(
-          `Mismatch: digest of bytes (${toHex(hash)}) does not match digest in CID (${toHex(cid.multihash.digest)})`)
+          `Mismatch: digest of bytes (${toHex(hash)}) does not match digest in CID (${toHex(mhDigest)})`)
   }
 }
 
