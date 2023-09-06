@@ -6,6 +6,7 @@ import { bytes } from 'multiformats'
 import * as raw from 'multiformats/codecs/raw'
 import * as json from 'multiformats/codecs/json'
 import { sha256 } from 'multiformats/hashes/sha2'
+import { identity } from 'multiformats/hashes/identity'
 import { from as hasher } from 'multiformats/hashes/hasher'
 import { blake2b256 } from '@multiformats/blake2/blake2b'
 import { recursive } from 'ipfs-unixfs-exporter'
@@ -24,6 +25,7 @@ const codecs = {
 }
 
 const hashes = {
+  [identity.code]: identity,
   [sha256.code]: sha256,
   [blake2b256.code]: hasher(blake2b256)
 }
