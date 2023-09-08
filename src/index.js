@@ -17,7 +17,7 @@ class Saturn {
   constructor (opts = {}) {
     this.opts = Object.assign({}, {
       clientId: randomUUID(),
-      cdnURL: 'strn.pl',
+      cdnURL: 'saturn.ms',
       connectTimeout: 5_000,
       downloadTimeout: 0
     }, opts)
@@ -39,7 +39,6 @@ class Saturn {
     CID.parse(cid)
 
     const options = Object.assign({}, this.opts, { format: 'car' }, opts)
-
     const url = `https://${options.cdnURL}/ipfs/${cid}?clientId=${options.clientId}&format=${options.format}`
 
     const log = {
@@ -81,7 +80,10 @@ class Saturn {
         throw new Error(`Non OK response received: ${res.status} ${res.statusText}`)
       }
 
-      const validationResult = await (options.downloadTimeout ? Promise.race([validateBody(res.body), setTimeoutPromise(options.downloadTimeout, false, { ref: false })]) : validateBody(res.body))
+      const validationResult = await (options.downloadTimeout
+        ? Promise.race([validateBody(res.body), setTimeoutPromise(options.downloadTimeout, false, { ref: false })])
+        : validateBody(res.body))
+
       if (!validationResult) {
         controller.abort()
         throw new Error('Couldn\'t download and validate test CID in time')
