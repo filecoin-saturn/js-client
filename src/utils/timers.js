@@ -1,6 +1,6 @@
-export const setTimeoutPromise = async ms => {
+export const setTimeoutPromise = async (ms, value = undefined) => {
   return new Promise(resolve => {
-    setTimeout(resolve, ms)
+    setTimeout(() => resolve(value), ms)
   })
 }
 

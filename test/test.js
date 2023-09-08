@@ -50,7 +50,7 @@ describe('Saturn client', () => {
     })
 
     it('should fail when exceeding download timeout', async () => {
-      await assert.rejects(client.fetchCID('QmXjYBY478Cno4jzdCcPy4NcJYFrwHZ51xaCP8vUwN9MGm', { downloadTimeout: 0 }))
+      await assert.rejects(client.fetchCID('QmXjYBY478Cno4jzdCcPy4NcJYFrwHZ51xaCP8vUwN9MGm/blah', { downloadTimeout: 1 }))
     })
   })
 })
