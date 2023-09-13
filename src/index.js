@@ -9,10 +9,10 @@ class Saturn {
   /**
    *
    * @param {object} [opts={}]
-   * @param {object} [opts.clientId=randomUUID()]
-   * @param {object} [opts.cdnURL=strn.pl]
-   * @param {object} [opts.connectTimeout=5000]
-   * @param {object} [opts.downloadTimeout=0]
+   * @param {string} [opts.clientId=randomUUID()]
+   * @param {string} [opts.cdnURL=saturn.ms]
+   * @param {number} [opts.connectTimeout=5000]
+   * @param {number} [opts.downloadTimeout=0]
    */
   constructor (opts = {}) {
     this.opts = Object.assign({}, {
@@ -28,18 +28,19 @@ class Saturn {
 
   /**
    *
-   * @param {string} cid
+   * @param {string} cidPath
    * @param {object} [opts={}]
    * @param {('car'|'raw')} [opts.format]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<Response>}
    */
-  async fetchCID (cid, opts = {}) {
+  async fetchCID (cidPath, opts = {}) {
+    const [cid] = cidPath.split('/')
     CID.parse(cid)
 
     const options = Object.assign({}, this.opts, { format: 'car' }, opts)
-    const url = `https://${options.cdnURL}/ipfs/${cid}?clientId=${options.clientId}&format=${options.format}`
+    const url = this.createRequestURL(cidPath, options)
 
     const log = {
       cid,
@@ -123,6 +124,21 @@ class Saturn {
     }
 
     return res
+  }
+
+  createRequestURL (cidPath, opts) {
+    let origin = opts.cdnURL
+    if (!origin.startsWith('http')) {
+      origin = `https://${origin}`
+    }
+    const url = new URL(`${origin}/ipfs/${cidPath}`)
+
+    url.searchParams.set('format', opts.format)
+    if (opts.format === 'car') {
+      url.searchParams.set('dag-scope', 'entity')
+    }
+
+    return url
   }
 
   reportLogs () {
