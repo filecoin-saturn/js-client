@@ -80,6 +80,19 @@ describe('CAR Verification', () => {
     assert.deepStrictEqual(actualContent, expectedContent)
   })
 
+  it.todo('should traverse non-unixfs dag-json CARs', async () => {
+    const cidPath =
+      'baguqeeram5ujjqrwheyaty3w5gdsmoz6vittchvhk723jjqxk7hakxkd47xq/foo/link/bar'
+    const filepath = './fixtures/dag-json-traversal.car'
+    const carStream = fs.createReadStream(filepath)
+
+    const contentItr = await extractVerifiedContent(cidPath, carStream)
+    const itr = contentItr[Symbol.asyncIterator]()
+    const actualContent = (await itr.next()).value
+    const expectedContent = { hello: 'this is not a link' }
+
+    assert.deepStrictEqual(actualContent, expectedContent)
+  })
 
   it('should error if CAR is missing blocks', async () => {
     const cidPath = 'bafybeigeqgfwhivuuxgmuvcrrwvs4j3yfzgljssvnuqzokm6uby4fpmwsa'
