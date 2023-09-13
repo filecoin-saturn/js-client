@@ -1,7 +1,6 @@
 import { CID } from 'multiformats'
 
-import { validateBody } from './utils/car.js'
-import { setTimeoutPromise } from './utils/timers.js'
+import { extractVerifiedContent } from './utils/car.js'
 import { randomUUID } from './utils/uuid.js'
 import { createBandwidthLog } from './utils/logging.js'
 
@@ -73,21 +72,12 @@ class Saturn {
       log.ttfb = new Date()
       log.httpStatusCode = res.status
       log.cacheStatus = headers.get('saturn-cache-status')
-      log.nodeId = headers.get('saturn-node-id') ?? headers.get('x-ipfs-pop')
+      log.nodeId = headers.get('saturn-node-id')
       log.transferId = headers.get('saturn-transfer-id')
       log.httpProtocol = headers.get('quic-status')
 
       if (!res.ok) {
         throw new Error(`Non OK response received: ${res.status} ${res.statusText}`)
-      }
-
-      const validationResult = await (options.downloadTimeout
-        ? Promise.race([validateBody(res.body), setTimeoutPromise(options.downloadTimeout, false, { ref: false })])
-        : validateBody(res.body))
-
-      if (!validationResult) {
-        controller.abort()
-        throw new Error('Couldn\'t download and validate test CID in time')
       }
     } catch (err) {
       log.ifError = err.message
@@ -124,6 +114,20 @@ class Saturn {
     }
 
     return res
+  }
+
+  /**
+   *
+   * @param {string} cidPath
+   * @param {object} [opts={}]
+   * @param {('car'|'raw')} [opts.format]
+   * @param {number} [opts.connectTimeout=5000]
+   * @param {number} [opts.downloadTimeout=0]
+   * @returns {Promise<AsyncIterable<Uint8Array>>}
+   */
+  async fetchContentItr (cidPath, opts = {}) {
+    const res = await this.fetchCID(cidPath, opts)
+    return extractVerifiedContent(cidPath, res.body)
   }
 
   createRequestURL (cidPath, opts) {
