@@ -9,7 +9,7 @@ import { sha256 } from 'multiformats/hashes/sha2'
 import { identity } from 'multiformats/hashes/identity'
 import { from as hasher } from 'multiformats/hashes/hasher'
 import { blake2b256 } from '@multiformats/blake2/blake2b'
-import { recursive } from 'ipfs-unixfs-exporter'
+import { exporter } from 'ipfs-unixfs-exporter'
 
 import { CarBlockGetter } from './car-block-getter.js'
 import { VerificationError } from './errors.js'
@@ -92,10 +92,8 @@ export async function verifyBlock (cid, bytes) {
  */
 export async function * extractVerifiedContent (cidPath, carStream) {
   const getter = await CarBlockGetter.fromStream(carStream)
-
-  for await (const child of recursive(cidPath, getter)) {
-    for await (const chunk of child.content()) {
-      yield chunk
-    }
+  const node = await exporter(cidPath, getter)
+  for await (const chunk of node.content()) {
+    yield chunk
   }
 }
