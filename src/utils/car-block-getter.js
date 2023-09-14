@@ -2,7 +2,8 @@ import { CarBlockIterator } from '@ipld/car/iterator'
 import { CID } from 'multiformats/cid'
 import { identity } from 'multiformats/hashes/identity'
 
-import { verifyBlock, asAsyncIterable } from './car.js'
+import { verifyBlock } from './car.js'
+import { asAsyncIterable } from './itr.js'
 import { promiseTimeout } from './timers.js'
 import { TimeoutError, VerificationError } from './errors.js'
 

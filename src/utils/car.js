@@ -2,7 +2,6 @@ import { CarBlockIterator } from '@ipld/car'
 import * as dagCbor from '@ipld/dag-cbor'
 import * as dagPb from '@ipld/dag-pb'
 import * as dagJson from '@ipld/dag-json'
-import toIterable from 'browser-readablestream-to-it'
 import { exporter } from 'ipfs-unixfs-exporter'
 import { bytes } from 'multiformats'
 import * as raw from 'multiformats/codecs/raw'
@@ -98,8 +97,4 @@ export async function * extractVerifiedContent (cidPath, carStream) {
   for await (const chunk of node.content()) {
     yield chunk
   }
-}
-
-export function asAsyncIterable (readable) {
-  return Symbol.asyncIterator in readable ? readable : toIterable(readable)
 }

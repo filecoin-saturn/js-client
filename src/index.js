@@ -1,6 +1,7 @@
 import { CID } from 'multiformats'
 
-import { extractVerifiedContent, asAsyncIterable } from './utils/car.js'
+import { extractVerifiedContent } from './utils/car.js'
+import { asAsyncIterable, asyncIteratorToBuffer } from './utils/itr.js'
 import { VerificationError } from './utils/errors.js'
 import { randomUUID } from './utils/uuid.js'
 
