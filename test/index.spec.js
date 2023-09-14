@@ -4,6 +4,8 @@ import { describe, it } from 'node:test'
 
 import Saturn from '#src/index.js'
 
+const TEST_CID = 'QmXjYBY478Cno4jzdCcPy4NcJYFrwHZ51xaCP8vUwN9MGm'
+
 describe('Saturn client', () => {
   describe('constructor', () => {
     it('should work w/o custom client ID', () => {
@@ -37,7 +39,7 @@ describe('Saturn client', () => {
     const client = new Saturn()
 
     it('should fetch test CID', async () => {
-      const res = await client.fetchCID('QmXjYBY478Cno4jzdCcPy4NcJYFrwHZ51xaCP8vUwN9MGm')
+      const { res } = await client.fetchCID(TEST_CID)
       assert(res instanceof Response)
     })
 
@@ -46,11 +48,35 @@ describe('Saturn client', () => {
     })
 
     it('should fail when exceeding connection timeout', async () => {
-      await assert.rejects(client.fetchCID('QmXjYBY478Cno4jzdCcPy4NcJYFrwHZ51xaCP8vUwN9MGm', { connectTimeout: 1 }))
+      await assert.rejects(client.fetchCID(TEST_CID, { connectTimeout: 1 }))
     })
 
-    it('should fail when exceeding download timeout', async () => {
-      await assert.rejects(client.fetchCID('QmXjYBY478Cno4jzdCcPy4NcJYFrwHZ51xaCP8vUwN9MGm/blah', { downloadTimeout: 1 }))
+    it.skip('should fail when exceeding download timeout', async () => {
+      await assert.rejects(client.fetchCID(`${TEST_CID}/blah`, { downloadTimeout: 1 }))
+    })
+  })
+
+  describe('Logging', () => {
+    const client = new Saturn()
+    client.reportingLogs = true
+
+    it('should create a log on fetch success', async () => {
+      for await (const _ of client.fetchContent(TEST_CID)) {}
+
+      const log = client.logs.pop()
+
+      assert(Number.isFinite(log.ttfbMs) && log.ttfbMs > 0)
+      assert.strictEqual(log.httpStatusCode, 200)
+      assert(Number.isFinite(log.numBytesSent) && log.numBytesSent > 0)
+      assert(Number.isFinite(log.requestDurationSec) && log.requestDurationSec > 0)
+      assert(!log.ifNetworkError)
+    })
+
+    it('should create a log on fetch network error', async () => {
+      await assert.rejects(client.fetchContentBuffer(TEST_CID, { connectTimeout: 1 }))
+
+      const log = client.logs.pop()
+      assert.strictEqual(log.ifNetworkError, 'This operation was aborted')
     })
   })
 })

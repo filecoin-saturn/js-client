@@ -2,6 +2,7 @@ import { CarBlockIterator } from '@ipld/car'
 import * as dagCbor from '@ipld/dag-cbor'
 import * as dagPb from '@ipld/dag-pb'
 import * as dagJson from '@ipld/dag-json'
+import { exporter } from 'ipfs-unixfs-exporter'
 import { bytes } from 'multiformats'
 import * as raw from 'multiformats/codecs/raw'
 import * as json from 'multiformats/codecs/json'
@@ -9,7 +10,6 @@ import { sha256 } from 'multiformats/hashes/sha2'
 import { identity } from 'multiformats/hashes/identity'
 import { from as hasher } from 'multiformats/hashes/hasher'
 import { blake2b256 } from '@multiformats/blake2/blake2b'
-import { recursive } from 'ipfs-unixfs-exporter'
 
 import { CarBlockGetter } from './car-block-getter.js'
 import { VerificationError } from './errors.js'
@@ -92,10 +92,9 @@ export async function verifyBlock (cid, bytes) {
  */
 export async function * extractVerifiedContent (cidPath, carStream) {
   const getter = await CarBlockGetter.fromStream(carStream)
+  const node = await exporter(cidPath, getter)
 
-  for await (const child of recursive(cidPath, getter)) {
-    for await (const chunk of child.content()) {
-      yield chunk
-    }
+  for await (const chunk of node.content()) {
+    yield chunk
   }
 }
