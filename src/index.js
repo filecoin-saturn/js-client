@@ -1,8 +1,8 @@
 import { CID } from 'multiformats'
 
-import { extractVerifiedContent } from './utils/car.js'
+import { extractVerifiedContent, asAsyncIterable } from './utils/car.js'
+import { VerificationError } from './utils/errors.js'
 import { randomUUID } from './utils/uuid.js'
-import { createBandwidthLog } from './utils/logging.js'
 
 class Saturn {
   /**
@@ -32,7 +32,7 @@ class Saturn {
    * @param {('car'|'raw')} [opts.format]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
-   * @returns {Promise<Response>}
+   * @returns {Promise<object>}
    */
   async fetchCID (cidPath, opts = {}) {
     const [cid] = cidPath.split('/')
@@ -42,19 +42,10 @@ class Saturn {
     const url = this.createRequestURL(cidPath, options)
 
     const log = {
-      cid,
       url,
-      httpStatusCode: null,
-      httpProtocol: null,
-      nodeId: null,
-      cacheStatus: null,
-      ttfb: null,
-      ttfbAfterDnsMs: null,
-      dnsTimeMs: null,
+      range: null,
       startTime: new Date(),
-      endTime: null,
-      transferSize: null,
-      ifError: null,
+      numBytesSent: 0
     }
 
     const controller = new AbortController()
@@ -69,51 +60,29 @@ class Saturn {
       clearTimeout(connectTimeout)
 
       const { headers } = res
-      log.ttfb = new Date()
+      log.ttfbMs = new Date() - log.startTime
       log.httpStatusCode = res.status
-      log.cacheStatus = headers.get('saturn-cache-status')
+      log.cacheHit = headers.get('saturn-cache-status') === 'HIT'
       log.nodeId = headers.get('saturn-node-id')
       log.transferId = headers.get('saturn-transfer-id')
       log.httpProtocol = headers.get('quic-status')
 
       if (!res.ok) {
-        throw new Error(`Non OK response received: ${res.status} ${res.statusText}`)
+        throw new Error(
+          `Non OK response received: ${res.status} ${res.statusText}`
+        )
       }
     } catch (err) {
-      log.ifError = err.message
+      log.ifNetworkError = err.message
+      // Report now if error, otherwise report after download is done.
+      this._finalizeLog(log)
+
       throw err
     } finally {
-      log.endTime = new Date()
-
-      if (typeof window !== 'undefined' && window?.performance) {
-        const entry = performance.getEntriesByType('resource')
-          .find(r => r.name === url.href)
-        if (entry) {
-          const dnsStart = entry.domainLookupStart
-          const dnsEnd = entry.domainLookupEnd
-          const hasData = dnsEnd > 0 && dnsStart > 0
-          if (hasData) {
-            log.dnsTimeMs = Math.round(dnsEnd - dnsStart)
-            log.ttfbAfterDnsMs = Math.round(entry.responseStart - entry.requestStart)
-          }
-
-          if (log.httpProtocol === null && entry.nextHopProtocol) {
-            log.httpProtocol = entry.nextHopProtocol
-          }
-          // else response didn't have Timing-Allow-Origin: *
-          //
-          // if both dnsStart and dnsEnd are > 0 but have the same value,
-          // its a dns cache hit.
-        }
-      }
-
-      if (this.reportingLogs) {
-        this.logs.push(log)
-        this.reportLogs()
-      }
+      this._addPerformanceAPIMetrics(log)
     }
 
-    return res
+    return { res, log }
   }
 
   /**
@@ -125,11 +94,36 @@ class Saturn {
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<AsyncIterable<Uint8Array>>}
    */
-  async fetchContentItr (cidPath, opts = {}) {
-    const res = await this.fetchCID(cidPath, opts)
-    return extractVerifiedContent(cidPath, res.body)
+  async * fetchContent (cidPath, opts = {}) {
+    const { res, log } = await this.fetchCID(cidPath, opts)
+
+    async function * metricsIterable (itr) {
+      for await (const chunk of itr) {
+        log.numBytesSent += chunk.length
+        yield chunk
+      }
+    }
+
+    try {
+      const itr = metricsIterable(asAsyncIterable(res.body))
+      yield * extractVerifiedContent(cidPath, itr)
+    } catch (err) {
+      if (err instanceof VerificationError) {
+        log.verificationError = err.message
+      }
+
+      throw err
+    } finally {
+      this._finalizeLog(log)
+    }
   }
 
+  /**
+   *
+   * @param {string} cidPath
+   * @param {object} [opts={}]
+   * @returns {URL}
+   */
   createRequestURL (cidPath, opts) {
     let origin = opts.cdnURL
     if (!origin.startsWith('http')) {
@@ -145,18 +139,70 @@ class Saturn {
     return url
   }
 
-  reportLogs () {
+  /**
+   *
+   * @param {object} log
+   */
+  _finalizeLog (log) {
+    log.requestDurationSec = (new Date() - log.startTime) / 1000
+    this.reportLogs(log)
+  }
+
+  /**
+   *
+   * @param {object} log
+   */
+  reportLogs (log) {
+    if (!this.reportingLogs) return
+
+    this.logs.push(log)
     this.reportLogsTimeout && clearTimeout(this.reportLogsTimeout)
-    this.reportLogsTimeout = setTimeout(this._reportLogs.bind(this), 10_000)
+    this.reportLogsTimeout = setTimeout(this._reportLogs.bind(this), 3_000)
   }
 
   async _reportLogs () {
     if (this.logs.length) {
-      await fetch('https://twb3qukm2i654i3tnvx36char40aymqq.lambda-url.us-west-2.on.aws/', {
-        method: 'POST',
-        body: JSON.stringify({ bandwidthLogs: this.logs.map(createBandwidthLog) }),
-      })
+      await fetch(
+        'https://twb3qukm2i654i3tnvx36char40aymqq.lambda-url.us-west-2.on.aws/',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            bandwidthLogs: this.logs
+          })
+        }
+      )
       this.logs = []
+    }
+  }
+
+  /**
+   *
+   * @param {object} log
+   */
+  _addPerformanceAPIMetrics (log) {
+    if (typeof window !== 'undefined' && window?.performance) {
+      const entry = performance
+        .getEntriesByType('resource')
+        .find((r) => r.name === log.url.href)
+      if (entry) {
+        const dnsStart = entry.domainLookupStart
+        const dnsEnd = entry.domainLookupEnd
+        const hasData = dnsEnd > 0 && dnsStart > 0
+        if (hasData) {
+          log.dnsTimeMs = Math.round(dnsEnd - dnsStart)
+          log.ttfbAfterDnsMs = Math.round(
+            entry.responseStart - entry.requestStart
+          )
+        }
+
+        if (log.httpProtocol === null && entry.nextHopProtocol) {
+          log.httpProtocol = entry.nextHopProtocol
+        }
+        // else response didn't have Timing-Allow-Origin: *
+        //
+        // if both dnsStart and dnsEnd are > 0 but have the same value,
+        // its a dns cache hit.
+      }
     }
   }
 }
