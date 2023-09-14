@@ -15,7 +15,9 @@ import Saturn from 'strn'
 
 const client = new Saturn()
 
-const res = await client.fetchCID('...')
+const contentIterator = await client.fetchContent('Qm...')
+
+const contentBuffer = await client.fetchContentBuffer('bafy...')
 ```
 
 ## License
