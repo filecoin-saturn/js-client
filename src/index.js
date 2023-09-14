@@ -132,6 +132,10 @@ class Saturn {
     return await asyncIteratorToBuffer(this.fetchContent(cidPath, opts))
   }
 
+  async * extractVerifiedContent (cidPath, carStream) {
+    yield * extractVerifiedContent(cidPath, carStream)
+  }
+
   /**
    *
    * @param {string} cidPath
