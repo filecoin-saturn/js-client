@@ -1,6 +1,6 @@
 {
   "name": "strn",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Filecoin Saturn Client",
   "main": "src/index.js",
   "type": "module",
