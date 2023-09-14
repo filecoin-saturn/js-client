@@ -1,9 +1,8 @@
 import { CarBlockIterator } from '@ipld/car/iterator'
-import toIterable from 'browser-readablestream-to-it'
 import { CID } from 'multiformats/cid'
 import { identity } from 'multiformats/hashes/identity'
 
-import { verifyBlock } from './car.js'
+import { verifyBlock, asAsyncIterable } from './car.js'
 import { promiseTimeout } from './timers.js'
 import { TimeoutError, VerificationError } from './errors.js'
 
@@ -52,8 +51,4 @@ export class CarBlockGetter {
 
     return bytes
   }
-}
-
-function asAsyncIterable (readable) {
-  return Symbol.asyncIterator in readable ? readable : toIterable(readable)
 }
