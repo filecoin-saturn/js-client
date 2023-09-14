@@ -123,6 +123,19 @@ class Saturn {
    *
    * @param {string} cidPath
    * @param {object} [opts={}]
+   * @param {('car'|'raw')} [opts.format]
+   * @param {number} [opts.connectTimeout=5000]
+   * @param {number} [opts.downloadTimeout=0]
+   * @returns {Promise<Uint8Array>}
+   */
+  async fetchContentBuffer (cidPath, opts = {}) {
+    return await asyncIteratorToBuffer(this.fetchContent(cidPath, opts))
+  }
+
+  /**
+   *
+   * @param {string} cidPath
+   * @param {object} [opts={}]
    * @returns {URL}
    */
   createRequestURL (cidPath, opts) {
