@@ -111,9 +111,8 @@ class Saturn {
       const itr = metricsIterable(asAsyncIterable(res.body))
       yield * extractVerifiedContent(cidPath, itr)
     } catch (err) {
-      if (err instanceof VerificationError) {
-        log.verificationError = err.message
-      }
+      // Assume verification error but could be a false positive.
+      log.verificationError = err.message
 
       throw err
     } finally {
