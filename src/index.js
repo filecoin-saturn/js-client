@@ -36,7 +36,7 @@ class Saturn {
    * @returns {Promise<object>}
    */
   async fetchCID (cidPath, opts = {}) {
-    const [cid] = cidPath.split('/')
+    const [cid] = (cidPath ?? '').split('/')
     CID.parse(cid)
 
     const options = Object.assign({}, this.opts, { format: 'car' }, opts)
