@@ -115,7 +115,7 @@ describe('CAR Verification', () => {
       },
       {
         name: 'VerificationError',
-        message: 'CAR file has no more blocks.'
+        message: 'get bafybeidhkumeonuwkebh2i4fc7o7lguehauradvlk57gzake6ggjsy372a: CAR file has no more blocks'
       }
     )
   })
@@ -155,7 +155,7 @@ describe('CAR Verification', () => {
       {
         name: 'VerificationError',
         message:
-          'received block with cid bafybeidhkumeonuwkebh2i4fc7o7lguehauradvlk57gzake6ggjsy372a, expected bafybeigeqgfwhivuuxgmuvcrrwvs4j3yfzgljssvnuqzokm6uby4fpmwsa'
+          'get bafybeigeqgfwhivuuxgmuvcrrwvs4j3yfzgljssvnuqzokm6uby4fpmwsa: received bafybeidhkumeonuwkebh2i4fc7o7lguehauradvlk57gzake6ggjsy372a instead'
       }
     )
   })

@@ -34,11 +34,11 @@ export class CarBlockGetter {
     const { value, done } = await promiseTimeout(
       this.carItr.next(),
       this.getBlockTimeout,
-      new TimeoutError(`get block ${cid} timed out`)
+      new TimeoutError(`get ${cid}: timed out`)
     )
 
     if (!value && done) {
-      throw new VerificationError('CAR file has no more blocks.')
+      throw new VerificationError(`get ${cid}: CAR file has no more blocks`)
     }
 
     const { cid: blockCid, bytes } = value
@@ -46,7 +46,7 @@ export class CarBlockGetter {
 
     if (!cid.equals(blockCid)) {
       throw new VerificationError(
-        `received block with cid ${blockCid}, expected ${cid}`
+        `get ${cid}: received ${blockCid} instead`
       )
     }
 
