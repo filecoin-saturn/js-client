@@ -2,6 +2,7 @@
   "name": "strn",
   "version": "0.0.8",
   "description": "Filecoin Saturn Client",
+  "homepage": "https://github.com/filecoin-saturn/js-client",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
