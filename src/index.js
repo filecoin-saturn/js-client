@@ -2,7 +2,6 @@ import { CID } from 'multiformats'
 
 import { extractVerifiedContent } from './utils/car.js'
 import { asAsyncIterable, asyncIteratorToBuffer } from './utils/itr.js'
-import { VerificationError } from './utils/errors.js'
 import { randomUUID } from './utils/uuid.js'
 
 class Saturn {
@@ -111,9 +110,7 @@ class Saturn {
       const itr = metricsIterable(asAsyncIterable(res.body))
       yield * extractVerifiedContent(cidPath, itr)
     } catch (err) {
-      // Assume verification error but could be a false positive.
-      log.verificationError = err.message
-
+      log.error = err.message
       throw err
     } finally {
       this._finalizeLog(log)
