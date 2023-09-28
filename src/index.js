@@ -56,7 +56,7 @@ class Saturn {
 
     let res
     try {
-      res = await fetch(url, { signal: controller.signal })
+      res = await fetch(url, { signal: controller.signal, ...options })
 
       clearTimeout(connectTimeout)
 
