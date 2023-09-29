@@ -205,19 +205,13 @@ class Saturn {
    * @param {Array<object>} logs
    */
   _matchLogsWithPerformanceMetrics (logs) {
-    const logsToReport = []
-
-    for (const log of logs) {
-      const metrics = this._getPerformanceMetricsForLog(log)
-
-      if (!metrics.isFromBrowserCache) {
-        delete metrics.isFromBrowserCache
-        Object.assign(log, metrics)
-        logsToReport.push(log)
-      }
-    }
-
-    return logsToReport
+    return logs
+      .map(log => ({ ...log, ...this._getPerformanceMetricsForLog(log) }))
+      .filter(log => !log.isFromBrowserCache)
+      .map(log => {
+        const { isFromBrowserCache: _, ...cleanLog } = log
+        return cleanLog
+      })
   }
 
   /**
