@@ -184,10 +184,9 @@ class Saturn {
       return
     }
 
-    let bandwidthLogs = this.logs
-    if (this.hasPerformanceAPI) {
-      bandwidthLogs = this._matchLogsWithPerformanceMetrics(bandwidthLogs)
-    }
+    const bandwidthLogs = this.hasPerformanceAPI
+      ? this._matchLogsWithPerformanceMetrics(this.logs)
+      : this.logs
 
     await fetch(
       this.opts.logURL,
