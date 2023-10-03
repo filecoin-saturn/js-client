@@ -1,5 +1,5 @@
 {
-  "name": "saturn-js-client",
+  "name": "@filecoin-saturn/js-client",
   "version": "0.0.8",
   "description": "Filecoin Saturn Client",
   "homepage": "https://github.com/filecoin-saturn/js-client",
@@ -48,5 +48,8 @@
   },
   "imports": {
     "#src/*": "./src/*"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
