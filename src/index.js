@@ -222,6 +222,8 @@ class Saturn {
   _getPerformanceMetricsForLog (log) {
     const metrics = {}
 
+    // URL is the best differentiator available, though there can be multiple entries per URL.
+    // It's a good enough heuristic.
     const entry = performance
       .getEntriesByType('resource')
       .find((r) => r.name === log.url.href)
