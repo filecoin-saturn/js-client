@@ -17,12 +17,17 @@ class Saturn {
     this.opts = Object.assign({}, {
       clientId: randomUUID(),
       cdnURL: 'saturn.ms',
+      logURL: 'https://twb3qukm2i654i3tnvx36char40aymqq.lambda-url.us-west-2.on.aws/',
       connectTimeout: 5_000,
       downloadTimeout: 0
     }, opts)
 
-    this.reportingLogs = process?.env?.NODE_ENV !== 'development'
     this.logs = []
+    this.reportingLogs = process?.env?.NODE_ENV !== 'development'
+    this.hasPerformanceAPI = typeof window !== 'undefined' && window?.performance
+    if (this.reportingLogs && this.hasPerformanceAPI) {
+      this._monitorPerformanceBuffer()
+    }
   }
 
   /**
@@ -43,9 +48,7 @@ class Saturn {
 
     const log = {
       url,
-      range: null,
-      startTime: new Date(),
-      numBytesSent: 0
+      startTime: new Date()
     }
 
     const controller = new AbortController()
@@ -80,8 +83,6 @@ class Saturn {
       this._finalizeLog(log)
 
       throw err
-    } finally {
-      this._addPerformanceAPIMetrics(log)
     }
 
     return { res, log }
@@ -100,6 +101,8 @@ class Saturn {
     const { res, log } = await this.fetchCID(cidPath, opts)
 
     async function * metricsIterable (itr) {
+      log.numBytesSent = 0
+
       for await (const chunk of itr) {
         log.numBytesSent += chunk.length
         yield chunk
@@ -177,48 +180,96 @@ class Saturn {
   }
 
   async _reportLogs () {
-    if (this.logs.length) {
-      await fetch(
-        'https://twb3qukm2i654i3tnvx36char40aymqq.lambda-url.us-west-2.on.aws/',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            bandwidthLogs: this.logs
-          })
-        }
-      )
-      this.logs = []
+    if (!this.logs.length) {
+      return
     }
+
+    const bandwidthLogs = this.hasPerformanceAPI
+      ? this._matchLogsWithPerformanceMetrics(this.logs)
+      : this.logs
+
+    await fetch(
+      this.opts.logURL,
+      {
+        method: 'POST',
+        body: JSON.stringify({ bandwidthLogs, logSender: this.opts.logSender })
+      }
+    )
+
+    this.logs = []
+    this._clearPerformanceBuffer()
+  }
+
+  /**
+   *
+   * @param {Array<object>} logs
+   */
+  _matchLogsWithPerformanceMetrics (logs) {
+    return logs
+      .map(log => ({ ...log, ...this._getPerformanceMetricsForLog(log) }))
+      .filter(log => !log.isFromBrowserCache)
+      .map(log => {
+        const { isFromBrowserCache: _, ...cleanLog } = log
+        return cleanLog
+      })
   }
 
   /**
    *
    * @param {object} log
+   * @returns {object}
    */
-  _addPerformanceAPIMetrics (log) {
-    if (typeof window !== 'undefined' && window?.performance) {
-      const entry = performance
-        .getEntriesByType('resource')
-        .find((r) => r.name === log.url.href)
-      if (entry) {
-        const dnsStart = entry.domainLookupStart
-        const dnsEnd = entry.domainLookupEnd
-        const hasData = dnsEnd > 0 && dnsStart > 0
-        if (hasData) {
-          log.dnsTimeMs = Math.round(dnsEnd - dnsStart)
-          log.ttfbAfterDnsMs = Math.round(
-            entry.responseStart - entry.requestStart
-          )
-        }
+  _getPerformanceMetricsForLog (log) {
+    const metrics = {}
 
-        if (log.httpProtocol === null && entry.nextHopProtocol) {
-          log.httpProtocol = entry.nextHopProtocol
-        }
-        // else response didn't have Timing-Allow-Origin: *
-        //
-        // if both dnsStart and dnsEnd are > 0 but have the same value,
-        // its a dns cache hit.
+    // URL is the best differentiator available, though there can be multiple entries per URL.
+    // It's a good enough heuristic.
+    const entry = performance
+      .getEntriesByType('resource')
+      .find((r) => r.name === log.url.href)
+
+    if (entry) {
+      const dnsStart = entry.domainLookupStart
+      const dnsEnd = entry.domainLookupEnd
+      const hasDnsMetrics = dnsEnd > 0 && dnsStart > 0
+
+      if (hasDnsMetrics) {
+        metrics.dnsTimeMs = Math.round(dnsEnd - dnsStart)
+        metrics.ttfbAfterDnsMs = Math.round(
+          entry.responseStart - entry.requestStart
+        )
       }
+
+      if (entry.nextHopProtocol) {
+        metrics.httpProtocol = entry.nextHopProtocol
+      }
+
+      metrics.isFromBrowserCache = (
+        entry.deliveryType === 'cache' ||
+        (log.httpStatusCode && entry.transferSize === 0)
+      )
+    }
+
+    return metrics
+  }
+
+  _monitorPerformanceBuffer () {
+    // Using static method prevents multiple unnecessary listeners.
+    performance.addEventListener('resourcetimingbufferfull', Saturn._setResourceBufferSize)
+  }
+
+  static _setResourceBufferSize () {
+    const increment = 250
+    const maxSize = 1000
+    const size = performance.getEntriesByType('resource').length
+    const newSize = Math.min(size + increment, maxSize)
+
+    performance.setResourceTimingBufferSize(newSize)
+  }
+
+  _clearPerformanceBuffer () {
+    if (this.hasPerformanceAPI) {
+      performance.clearResourceTimings()
     }
   }
 }
