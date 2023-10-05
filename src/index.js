@@ -77,7 +77,7 @@ class Saturn {
       }
     } catch (err) {
       if (!res) {
-        log.ifNetworkError = err.message
+        log.error = err.message
       }
       // Report now if error, otherwise report after download is done.
       this._finalizeLog(log)
