@@ -25,7 +25,6 @@ class Saturn {
       authURL: 'https://fz3dyeyxmebszwhuiky7vggmsu0rlkoy.lambda-url.us-west-2.on.aws/',
       connectTimeout: 5_000,
       downloadTimeout: 0
-
     }, opts)
 
     this.logs = []
@@ -51,7 +50,7 @@ class Saturn {
     const [cid] = (cidPath ?? '').split('/')
     CID.parse(cid)
 
-    const jwt = await getJWT(this.opts)
+    const jwt = await getJWT(this.opts, this.storage)
 
     const options = Object.assign({}, this.opts, { format: 'car', jwt }, opts)
     const url = this.createRequestURL(cidPath, options)

@@ -3,33 +3,28 @@ import { bytes } from 'multiformats'
 
 const JWT_KEY = 'strn/jwt'
 
-const memoryStorage = {}
-
-function getFromStorage () {
-  try {
-    return window.localStorage.getItem(JWT_KEY)
-  } catch (e) {
-    return memoryStorage[JWT_KEY]
-  }
-}
-
-function setInStorage (jwt) {
-  try {
-    window.localStorage.setItem(JWT_KEY, jwt)
-  } catch (e) {
-    memoryStorage[JWT_KEY] = jwt
-  }
-}
-
+/**
+ * @param {string} jwt
+ */
 export function isJwtValid (jwt) {
   if (!jwt) return false
   const { exp } = JSON.parse(bytes.toString(base64.decode('m' + jwt.split('.')[1])))
   return Date.now() < exp * 1000
 }
 
-export async function getJWT (opts) {
-  const jwt = getFromStorage()
-  if (isJwtValid(jwt)) return jwt
+/**
+ * @param {object} opts
+ * @param {string} opts.clientKey
+ * @param {string} opts.authURL
+ * @param {import('./utils/storage.js').Storage} storage
+ * @returns {Promise<string>}
+ */
+export async function getJWT (opts, storage) {
+  try {
+    const jwt = await storage.get(JWT_KEY)
+    if (isJwtValid(jwt)) return jwt
+  } catch (e) {
+  }
 
   const { clientKey, authURL } = opts
   const url = `${authURL}?clientKey=${clientKey}`
@@ -37,7 +32,10 @@ export async function getJWT (opts) {
   const result = await fetch(url)
   const { token } = await result.json()
 
-  setInStorage(token)
+  try {
+    await storage.set(JWT_KEY, token)
+  } catch (e) {
+  }
 
   return token
 }
