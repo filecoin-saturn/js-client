@@ -71,6 +71,7 @@ class Saturn {
 
     if (!this.isBrowser) {
       options.headers = {
+        ...(options.headers || {}),
         Authorization: 'Bearer ' + options.jwt
       }
     }
