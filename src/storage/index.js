@@ -1,4 +1,3 @@
-
 // @ts-check
 
 import { indexedDbStorage } from './indexed-db-storage.js'
