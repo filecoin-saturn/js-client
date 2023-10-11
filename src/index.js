@@ -3,7 +3,7 @@ import { CID } from 'multiformats'
 import { extractVerifiedContent } from './utils/car.js'
 import { asAsyncIterable, asyncIteratorToBuffer } from './utils/itr.js'
 import { randomUUID } from './utils/uuid.js'
-import { memoryStorage } from './utils/storage.js'
+import { memoryStorage } from './utils/storage/index.js'
 
 class Saturn {
   /**

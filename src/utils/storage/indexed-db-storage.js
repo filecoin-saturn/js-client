@@ -7,15 +7,8 @@ const DEFAULT_IDB_STORAGE_NAME = 'saturn-db'
 const DEFAULT_SATURN_STORAGE_NAME = 'saturn-client'
 
 /**
- * @typedef {object} Storage
- * @property {function(string):Promise<any>} get - Retrieves the value associated with the key.
- * @property {function(string,any):Promise<void>} set - Sets a new value for the key.
- * @property {function(string):Promise<any>} delete - Deletes the value associated with the key.
- */
-
-/**
  * @function indexedDbStorage
- * @returns {Storage}
+ * @returns {import('./index.js').Storage}
  */
 export function indexedDbStorage () {
   const indexedDbExists = (typeof window !== 'undefined') && window?.indexedDB
@@ -32,19 +25,5 @@ export function indexedDbStorage () {
     get: async (key) => indexedDbExists && (await dbPromise).get(DEFAULT_SATURN_STORAGE_NAME, key),
     set: async (key, value) => indexedDbExists && (await dbPromise).put(DEFAULT_SATURN_STORAGE_NAME, value, key),
     delete: async (key) => indexedDbExists && (await dbPromise).delete(DEFAULT_SATURN_STORAGE_NAME, key)
-  }
-}
-
-/**
- * @function memoryStorage
- * @returns {Storage}
- */
-export function memoryStorage () {
-  const storageObject = {}
-
-  return {
-    get: async (key) => storageObject[key],
-    set: async (key, value) => { storageObject[key] = value },
-    delete: async (key) => { delete storageObject[key] }
   }
 }
