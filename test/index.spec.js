@@ -6,7 +6,7 @@ import Saturn from '#src/index.js'
 
 const TEST_CID = 'QmXjYBY478Cno4jzdCcPy4NcJYFrwHZ51xaCP8vUwN9MGm'
 
-const clientKey = '1234567890abcdef'
+const clientKey = 'abc123'
 
 describe('Saturn client', () => {
   describe('constructor', () => {

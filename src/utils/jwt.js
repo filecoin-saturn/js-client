@@ -30,7 +30,9 @@ export async function getJWT (opts, storage) {
   const url = `${authURL}?clientKey=${clientKey}`
 
   const result = await fetch(url)
-  const { token } = await result.json()
+  const { token, message } = await result.json()
+
+  if (!token) throw new Error(message || 'Failed to refresh jwt')
 
   try {
     await storage.set(JWT_KEY, token)
