@@ -9,7 +9,7 @@ const TEST_CID = 'QmXjYBY478Cno4jzdCcPy4NcJYFrwHZ51xaCP8vUwN9MGm'
 describe('Saturn client', () => {
   describe('constructor', () => {
     it('should work w/o custom client ID', () => {
-      new Saturn()
+      new Saturn() // eslint-disable-line
     })
 
     it('should work with custom client ID', () => {
@@ -61,7 +61,7 @@ describe('Saturn client', () => {
     client.reportingLogs = true
 
     it('should create a log on fetch success', async () => {
-      for await (const _ of client.fetchContent(TEST_CID)) {}
+      for await (const _ of client.fetchContent(TEST_CID)) {} // eslint-disable-line
 
       const log = client.logs.pop()
 
