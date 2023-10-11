@@ -43,14 +43,8 @@ export function memoryStorage () {
   const storageObject = {}
 
   return {
-    get: (key) => Promise.resolve(storageObject[key]),
-    set: (key, value) => {
-      storageObject[key] = value
-      return Promise.resolve()
-    },
-    delete: (key) => {
-      delete storageObject[key]
-      return Promise.resolve()
-    }
+    get: async (key) => storageObject[key],
+    set: async (key, value) => { storageObject[key] = value },
+    delete: async (key) => { delete storageObject[key] }
   }
 }
