@@ -4,11 +4,13 @@ import { extractVerifiedContent } from './utils/car.js'
 import { asAsyncIterable, asyncIteratorToBuffer } from './utils/itr.js'
 import { randomUUID } from './utils/uuid.js'
 import { memoryStorage } from './storage/index.js'
+import { getJWT } from './utils/jwt.js'
 
 class Saturn {
   /**
    *
    * @param {object} [opts={}]
+   * @param {string} [opts.clientKey]
    * @param {string} [opts.clientId=randomUUID()]
    * @param {string} [opts.cdnURL=saturn.ms]
    * @param {number} [opts.connectTimeout=5000]
@@ -20,15 +22,20 @@ class Saturn {
       clientId: randomUUID(),
       cdnURL: 'saturn.ms',
       logURL: 'https://twb3qukm2i654i3tnvx36char40aymqq.lambda-url.us-west-2.on.aws/',
+      authURL: 'https://fz3dyeyxmebszwhuiky7vggmsu0rlkoy.lambda-url.us-west-2.on.aws/',
       connectTimeout: 5_000,
       downloadTimeout: 0
-
     }, opts)
+
+    if (!this.opts.clientKey) {
+      throw new Error('clientKey is required')
+    }
 
     this.logs = []
     this.storage = this.opts.storage || memoryStorage()
     this.reportingLogs = process?.env?.NODE_ENV !== 'development'
     this.hasPerformanceAPI = typeof window !== 'undefined' && window?.performance
+    this.isBrowser = typeof window !== 'undefined'
     if (this.reportingLogs && this.hasPerformanceAPI) {
       this._monitorPerformanceBuffer()
     }
@@ -47,7 +54,9 @@ class Saturn {
     const [cid] = (cidPath ?? '').split('/')
     CID.parse(cid)
 
-    const options = Object.assign({}, this.opts, { format: 'car' }, opts)
+    const jwt = await getJWT(this.opts, this.storage)
+
+    const options = Object.assign({}, this.opts, { format: 'car', jwt }, opts)
     const url = this.createRequestURL(cidPath, options)
 
     const log = {
@@ -59,6 +68,13 @@ class Saturn {
     const connectTimeout = setTimeout(() => {
       controller.abort()
     }, options.connectTimeout)
+
+    if (!this.isBrowser) {
+      options.headers = {
+        ...(options.headers || {}),
+        Authorization: 'Bearer ' + options.jwt
+      }
+    }
 
     let res
     try {
@@ -157,6 +173,10 @@ class Saturn {
     url.searchParams.set('format', opts.format)
     if (opts.format === 'car') {
       url.searchParams.set('dag-scope', 'entity')
+    }
+
+    if (this.isBrowser) {
+      url.searchParams.set('jwt', opts.jwt)
     }
 
     return url
