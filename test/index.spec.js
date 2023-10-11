@@ -6,37 +6,39 @@ import Saturn from '#src/index.js'
 
 const TEST_CID = 'QmXjYBY478Cno4jzdCcPy4NcJYFrwHZ51xaCP8vUwN9MGm'
 
+const clientKey = '1234567890abcdef'
+
 describe('Saturn client', () => {
   describe('constructor', () => {
     it('should work w/o custom client ID', () => {
-      new Saturn()
+      new Saturn({ clientKey })
     })
 
     it('should work with custom client ID', () => {
       const clientId = randomUUID()
-      const saturn = new Saturn({ clientId })
+      const saturn = new Saturn({ clientId, clientKey })
       assert.strictEqual(saturn.opts.clientId, clientId)
     })
 
     it('should work with custom CDN URL', () => {
       const cdnURL = 'custom.com'
-      const saturn = new Saturn({ cdnURL })
+      const saturn = new Saturn({ cdnURL, clientKey })
       assert.strictEqual(saturn.opts.cdnURL, cdnURL)
     })
 
     it('should work with custom connect timeout', () => {
-      const saturn = new Saturn({ connectTimeout: 1234 })
+      const saturn = new Saturn({ connectTimeout: 1234, clientKey })
       assert.strictEqual(saturn.opts.connectTimeout, 1234)
     })
 
     it('should work with custom download timeout', () => {
-      const saturn = new Saturn({ downloadTimeout: 3456 })
+      const saturn = new Saturn({ downloadTimeout: 3456, clientKey })
       assert.strictEqual(saturn.opts.downloadTimeout, 3456)
     })
   })
 
   describe('Fetch a CID', () => {
-    const client = new Saturn()
+    const client = new Saturn({ clientKey })
 
     it('should fetch test CID', async () => {
       const { res } = await client.fetchCID(TEST_CID)
@@ -57,7 +59,7 @@ describe('Saturn client', () => {
   })
 
   describe('Logging', () => {
-    const client = new Saturn()
+    const client = new Saturn({ clientKey })
     client.reportingLogs = true
 
     it('should create a log on fetch success', async () => {
