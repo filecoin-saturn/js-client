@@ -12,6 +12,8 @@ class Saturn {
    * @param {string} [opts.cdnURL=saturn.ms]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
+   * @param {string} [opts.orchUrl]
+   * @param {import('./utils/storage.js').Storage} [opts.storage]
    */
   constructor (opts = {}) {
     this.opts = Object.assign({}, {
@@ -19,15 +21,21 @@ class Saturn {
       cdnURL: 'saturn.ms',
       logURL: 'https://twb3qukm2i654i3tnvx36char40aymqq.lambda-url.us-west-2.on.aws/',
       connectTimeout: 5_000,
-      downloadTimeout: 0
+      downloadTimeout: 0,
+      orchUrl: 'https://orchestrator.strn.pl/nodes?maxNodes=100'
     }, opts)
 
     this.logs = []
+    this.storage = this.opts.storage
+    this.nodes = []
+    this.nodesListKey = 'saturn-nodes'
     this.reportingLogs = process?.env?.NODE_ENV !== 'development'
     this.hasPerformanceAPI = typeof window !== 'undefined' && window?.performance
     if (this.reportingLogs && this.hasPerformanceAPI) {
       this._monitorPerformanceBuffer()
     }
+
+    this._loadNodes(this.opts)
   }
 
   /**
@@ -271,6 +279,63 @@ class Saturn {
     if (this.hasPerformanceAPI) {
       performance.clearResourceTimings()
     }
+  }
+
+  getNodes () {
+    return this.nodes
+  }
+
+  _setNodes (nodes) {
+    this.nodes = nodes
+  }
+
+  async _loadNodes (opts) {
+    let origin = opts.orchUrl
+
+    let cachedNodesList
+    if (this.storage && this.storage.check()) {
+      cachedNodesList = this.storage.get(this.nodesListKey)
+    }
+
+    if (!origin.startsWith('http')) {
+      origin = `https://${origin}`
+    }
+
+    const url = new URL(origin)
+    const controller = new AbortController()
+    const options = Object.assign({}, { method: 'GET' }, this.opts)
+
+    const connectTimeout = setTimeout(() => {
+      controller.abort()
+    }, options.connectTimeout)
+
+    const orchestatorResponse = await fetch(url.href, { signal: controller.signal, ...options })
+    const orchNodesList = orchestatorResponse.json()
+    clearTimeout(connectTimeout)
+
+    // This promise races fetching nodes list from the orchestrator and
+    // and the provided storage object (localStorage, sessionStorage, etc.)
+    // to insure we have a fallback set as quick as possible
+    let result
+    if (cachedNodesList) {
+      result = await Promise.race([orchNodesList, cachedNodesList])
+    } else {
+      result = await orchNodesList
+    }
+
+    let nodes
+    // if the orchestrator responds first then always refresh and ignore the cached list.
+    if (result === await orchNodesList) {
+      nodes = result
+      this.nodes = nodes
+    } else {
+      nodes = result
+      this.nodes = nodes && JSON.parse(nodes)
+      // We still want to retrieve the latest list from the orchestrator and update the cache.
+      nodes = await orchNodesList
+      this._setNodes(nodes)
+    }
+    cachedNodesList && this.storage.set(this.nodesListKey, JSON.stringify(nodes))
   }
 }
 
