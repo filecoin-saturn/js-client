@@ -281,14 +281,6 @@ class Saturn {
     }
   }
 
-  getNodes () {
-    return this.nodes
-  }
-
-  _setNodes (nodes) {
-    this.nodes = nodes
-  }
-
   async _loadNodes (opts) {
     let origin = opts.orchUrl
 
@@ -333,7 +325,7 @@ class Saturn {
       this.nodes = nodes && JSON.parse(nodes)
       // We still want to retrieve the latest list from the orchestrator and update the cache.
       nodes = await orchNodesList
-      this._setNodes(nodes)
+      this.nodes = nodes
     }
     cachedNodesList && this.storage.set(this.nodesListKey, JSON.stringify(nodes))
   }
