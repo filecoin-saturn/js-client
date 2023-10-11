@@ -76,7 +76,7 @@ describe('Saturn client', () => {
       await assert.rejects(client.fetchContentBuffer(TEST_CID, { connectTimeout: 1 }))
 
       const log = client.logs.pop()
-      assert.strictEqual(log.ifNetworkError, 'This operation was aborted')
+      assert.strictEqual(log.error, 'This operation was aborted')
     })
   })
 })
