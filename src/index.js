@@ -3,6 +3,7 @@ import { CID } from 'multiformats'
 import { extractVerifiedContent } from './utils/car.js'
 import { asAsyncIterable, asyncIteratorToBuffer } from './utils/itr.js'
 import { randomUUID } from './utils/uuid.js'
+import { memoryStorage } from './storage/index.js'
 
 class Saturn {
   /**
@@ -12,6 +13,7 @@ class Saturn {
    * @param {string} [opts.cdnURL=saturn.ms]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
+   * @param {import('./utils/storage.js').Storage} [opts.storage]
    */
   constructor (opts = {}) {
     this.opts = Object.assign({}, {
@@ -20,9 +22,11 @@ class Saturn {
       logURL: 'https://twb3qukm2i654i3tnvx36char40aymqq.lambda-url.us-west-2.on.aws/',
       connectTimeout: 5_000,
       downloadTimeout: 0
+
     }, opts)
 
     this.logs = []
+    this.storage = this.opts.storage || memoryStorage()
     this.reportingLogs = process?.env?.NODE_ENV !== 'development'
     this.hasPerformanceAPI = typeof window !== 'undefined' && window?.performance
     if (this.reportingLogs && this.hasPerformanceAPI) {
