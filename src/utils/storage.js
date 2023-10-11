@@ -36,3 +36,24 @@ export function indexedDbStorage () {
     delete: async (key) => indexedDbExists && (await dbPromise).delete(DEFAULT_SATURN_STORAGE_NAME, key)
   }
 }
+
+/**
+ * @function memoryStorage
+ * @returns {Storage}
+ */
+export function memoryStorage () {
+  const storageObject = {}
+
+  return {
+    check: () => true, // Memory storage is always accessible
+    get: (key) => Promise.resolve(storageObject[key]),
+    set: (key, value) => {
+      storageObject[key] = value
+      return Promise.resolve()
+    },
+    delete: (key) => {
+      delete storageObject[key]
+      return Promise.resolve()
+    }
+  }
+}
