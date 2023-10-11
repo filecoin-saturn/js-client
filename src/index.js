@@ -14,7 +14,7 @@ class Saturn {
    * @param {string} [opts.cdnURL=saturn.ms]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
-   * @param {string} [opts.orchUrl]
+   * @param {string} [opts.orchURL]
    * @param {import('./utils/storage.js').Storage} [opts.storage]
    */
   constructor (opts = {}) {
@@ -22,9 +22,9 @@ class Saturn {
       clientId: randomUUID(),
       cdnURL: 'saturn.ms',
       logURL: 'https://twb3qukm2i654i3tnvx36char40aymqq.lambda-url.us-west-2.on.aws/',
+      orchURL: 'https://orchestrator.strn.pl/nodes?maxNodes=100',
       connectTimeout: 5_000,
-      downloadTimeout: 0,
-      orchUrl: 'https://orchestrator.strn.pl/nodes?maxNodes=100'
+      downloadTimeout: 0
     }, opts)
 
     this.logs = []
@@ -284,7 +284,7 @@ class Saturn {
   }
 
   async _loadNodes (opts) {
-    let origin = opts.orchUrl
+    let origin = opts.orchURL
 
     let cachedNodesList
     if (this.storage && this.storage.check()) {

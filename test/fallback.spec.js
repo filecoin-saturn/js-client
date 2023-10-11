@@ -21,7 +21,7 @@ describe('Client Fallback', () => {
 
     // No Storage is injected
     const saturn = new Saturn()
-    const mockOpts = { orchUrl: TEST_DEFAULT_ORCH }
+    const mockOpts = { orchURL: TEST_DEFAULT_ORCH }
 
     await saturn._loadNodes(mockOpts)
 
@@ -54,7 +54,7 @@ describe('Client Fallback', () => {
     const saturn = new Saturn({ storage: mockStorage })
 
     // Mocking options
-    const mockOpts = { orchUrl: TEST_DEFAULT_ORCH }
+    const mockOpts = { orchURL: TEST_DEFAULT_ORCH }
 
     await saturn._loadNodes(mockOpts)
 
@@ -94,7 +94,7 @@ describe('Client Fallback', () => {
     const saturn = new Saturn({ storage: mockStorage })
 
     // Mocking options
-    const mockOpts = { orchUrl: TEST_DEFAULT_ORCH }
+    const mockOpts = { orchURL: TEST_DEFAULT_ORCH }
 
     await saturn._loadNodes(mockOpts)
 
