@@ -8,7 +8,6 @@ const DEFAULT_SATURN_STORAGE_NAME = 'saturn-client'
 
 /**
  * @typedef {object} Storage
- * @property {function():boolean} check - Checks if the provided Storage is accessible
  * @property {function(string):Promise<any>} get - Retrieves the value associated with the key.
  * @property {function(string,any):Promise<void>} set - Sets a new value for the key.
  * @property {function(string):Promise<any>} delete - Deletes the value associated with the key.
@@ -30,7 +29,6 @@ export function indexedDbStorage () {
   }
 
   return {
-    check: () => Boolean(indexedDbExists),
     get: async (key) => indexedDbExists && (await dbPromise).get(DEFAULT_SATURN_STORAGE_NAME, key),
     set: async (key, value) => indexedDbExists && (await dbPromise).put(DEFAULT_SATURN_STORAGE_NAME, value, key),
     delete: async (key) => indexedDbExists && (await dbPromise).delete(DEFAULT_SATURN_STORAGE_NAME, key)
@@ -45,7 +43,6 @@ export function memoryStorage () {
   const storageObject = {}
 
   return {
-    check: () => true, // Memory storage is always accessible
     get: (key) => Promise.resolve(storageObject[key]),
     set: (key, value) => {
       storageObject[key] = value
