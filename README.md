@@ -5,13 +5,13 @@ This is the official JavaScript client for Filecoin Saturn. It is a work in prog
 ## Installation
 
 ```bash
-npm install strn
+npm install @filecoin-saturn/js-client
 ```
 
 ## Usage
 
 ```js
-import Saturn from 'strn'
+import Saturn from '@filecoin-saturn/js-client'
 
 const client = new Saturn()
 
