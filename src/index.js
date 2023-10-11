@@ -1,3 +1,5 @@
+// @ts-check
+
 import { CID } from 'multiformats'
 
 import { extractVerifiedContent } from './utils/car.js'
@@ -327,7 +329,7 @@ class Saturn {
       nodes = await orchNodesList
       this.nodes = nodes
     }
-    cachedNodesList && this.storage.set(this.nodesListKey, JSON.stringify(nodes))
+    cachedNodesList && this.storage?.set(this.nodesListKey, JSON.stringify(nodes))
   }
 }
 

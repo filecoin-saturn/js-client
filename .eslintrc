@@ -1,0 +1,14 @@
+{
+    "plugins": [
+        "jsdoc",
+        "promise"
+    ],
+    "extends": "ipfs",
+    "parserOptions": {
+        "sourceType": "module",
+        "ecmaVersion": "latest"
+    },
+    "rules": {
+        "jsdoc/no-undefined-types": 1
+    },
+}

@@ -1,7 +1,7 @@
 
-// mocks.js
+// @ts-check
 
-import { rest } from 'msw'
+import { RestHandler, rest } from 'msw'
 import { setupServer } from 'msw/node'
 const HTTP_STATUS_OK = 200
 
@@ -9,7 +9,7 @@ const HTTP_STATUS_OK = 200
  *
  * @typedef {object} Node
  * @property {string} ip
- * @property {string} weight
+ * @property {number} weight
  * @property {number} distance
  * @property {string} url
  */
@@ -17,9 +17,9 @@ const HTTP_STATUS_OK = 200
 /**
  * Generates sets of nodes based on orchestrator response. Nodes are generated deteriministically.
  *
- * @param {integer} count
+ * @param {number} count
  * @param {string} originDomain - saturn origin domain
- * @returns {[]Node}
+ * @returns {Node[]}
  */
 export function generateNodes (count, originDomain) {
   const nodes = []
@@ -39,13 +39,13 @@ export function generateNodes (count, originDomain) {
 /**
  * Generates a mock handler to mimick Saturn's orchestrator /nodes endpoint.
  *
- * @param {integer} count - amount of nodes
+ * @param {number} count - amount of nodes
  * @param {string} orchUrl - orchestratorUrl
  * @param {string} originDomain - saturn origin domain
  * @param {number} delay - request delay in ms
  * @returns {RestHandler<any>}
  */
-export function mockOrchHandler (count, orchUrl, originDomain, delay) {
+export function mockOrchHandler (count, orchUrl, originDomain, delay = 0) {
   if (!orchUrl.startsWith('http')) {
     orchUrl = `https://${orchUrl}`
   }
@@ -63,7 +63,7 @@ export function mockOrchHandler (count, orchUrl, originDomain, delay) {
 /**
  * Generates mock servers to act as L1 nodes.
  *
- * @param {integer} count - amount of nodes to mock
+ * @param {number} count - amount of nodes to mock
  * @param {string} originDomain - saturn origin domain.
  * @returns {RestHandler<any>[]}
  */
@@ -82,7 +82,7 @@ export function mockNodesHandlers (count, originDomain) {
 }
 
 /**
- * @param {Function[]} handlers - amount of nodes to mock
+ * @param {RestHandler<any>[]} handlers - amount of nodes to mock
  */
 export function getMockServer (handlers) {
   return setupServer(...handlers)

@@ -1,3 +1,5 @@
+// @ts-check
+
 import { openDB } from 'idb'
 
 const DEFAULT_IDB_VERSION = 1

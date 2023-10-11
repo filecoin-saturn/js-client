@@ -1,7 +1,8 @@
+
 import assert from 'node:assert/strict'
 import { describe, mock, test } from 'node:test'
 
-import Saturn from '#src/index.js'
+import Saturn from '../src/index.js'
 import { generateNodes, getMockServer, mockOrchHandler } from './test-utils.js'
 
 const TEST_DEFAULT_ORCH = 'https://orchestrator.strn.pl/nodes?maxNodes=100'
@@ -42,8 +43,9 @@ describe('Client Fallback', () => {
     // Mocking storage object
     const mockStorage = {
       check: () => true,
-      get: async (key) => { return null },
-      set: async (key, value) => { return null }
+      get: async (key) => null,
+      set: async (key, value) => null,
+      delete: async (key) => null
     }
     t.mock.method(mockStorage, 'get')
     t.mock.method(mockStorage, 'check')
