@@ -27,6 +27,10 @@ class Saturn {
       downloadTimeout: 0
     }, opts)
 
+    if (!this.opts.clientKey) {
+      throw new Error('clientKey is required')
+    }
+
     this.logs = []
     this.storage = this.opts.storage || memoryStorage()
     this.reportingLogs = process?.env?.NODE_ENV !== 'development'
