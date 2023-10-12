@@ -11,7 +11,7 @@ npm install @filecoin-saturn/js-client
 ## Usage
 
 ```js
-import Saturn from '@filecoin-saturn/js-client'
+import { Saturn } from '@filecoin-saturn/js-client'
 
 const client = new Saturn()
 

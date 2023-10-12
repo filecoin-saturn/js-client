@@ -7,9 +7,8 @@ module.exports = {
     filename: 'dist/strn.min.js',
     path: path.resolve(__dirname),
     library: {
-      name: 'Saturn',
+      name: 'SaturnModule',
       type: 'var',
-      export: 'default',
     }
   }
 };
