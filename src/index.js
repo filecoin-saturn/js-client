@@ -130,11 +130,17 @@ class Saturn {
         const byteChunks = await this.fetchContent(cidPath, opts)
         for await (const chunk of byteChunks) {
           // avoid sending duplicate chunks
-          if (byteCount >= byteCountCheckpoint) {
-            yield chunk
+          if (byteCount < byteCountCheckpoint) {
+            // checks for overlapping chunks
+            const remainingBytes = byteCountCheckpoint - byteCount
+            if (remainingBytes < chunk.length) {
+              yield chunk.slice(remainingBytes)
+            }
             byteCount += chunk.length
+          } else {
+            yield chunk
+            byteCountCheckpoint += chunk.length
           }
-          byteCountCheckpoint += chunk.length
         }
         return
       } catch (err) {
