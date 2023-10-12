@@ -45,7 +45,7 @@ class Saturn {
       this._monitorPerformanceBuffer()
     }
 
-    this.loadNodes = this._loadNodes(this.opts)
+    this.loadNodesPromise = this._loadNodes(this.opts)
   }
 
   /**
@@ -117,7 +117,7 @@ class Saturn {
 
   async * fetchContentWithFallback (cidPath, opts = {}, origins) {
     if (this.nodes.length === 0) {
-      await this.loadNodes
+      await this.loadNodesPromise
     }
     let lastError = null
     // we use this to checkpoint at which chunk a request failed.
@@ -340,9 +340,9 @@ class Saturn {
   async _loadNodes (opts) {
     let origin = opts.orchURL
 
-    let cachedNodesList
+    let cacheNodesListPromise
     if (this.storage) {
-      cachedNodesList = this.storage.get(this.nodesListKey)
+      cacheNodesListPromise = this.storage.get(this.nodesListKey)
     }
 
     if (!origin.startsWith('http')) {
@@ -357,22 +357,22 @@ class Saturn {
       controller.abort()
     }, options.connectTimeout)
 
-    const orchestatorResponse = await fetch(url.href, { signal: controller.signal, ...options })
-    const orchNodesList = orchestatorResponse.json()
+    const orchResponse = await fetch(url.href, { signal: controller.signal, ...options })
+    const orchNodesList = orchResponse.json()
     clearTimeout(connectTimeout)
 
     // This promise races fetching nodes list from the orchestrator and
     // and the provided storage object (localStorage, sessionStorage, etc.)
     // to insure we have a fallback set as quick as possible
     let nodes
-    if (cachedNodesList) {
-      nodes = await Promise.race([orchNodesList, cachedNodesList])
+    if (cacheNodesListPromise) {
+      nodes = await Promise.race([orchNodesList, cacheNodesListPromise])
     } else {
       nodes = await orchNodesList
     }
 
     // if storage returns first, update based on cached storage.
-    if (nodes === await cachedNodesList) {
+    if (nodes === await cacheNodesListPromise) {
       nodes = nodes && JSON.parse(nodes)
       this.nodes = nodes
     }
@@ -380,7 +380,7 @@ class Saturn {
     // we always want to update from the orchestrator regardless.
     nodes = await orchNodesList
     this.nodes = nodes
-    cachedNodesList && this.storage?.set(this.nodesListKey, JSON.stringify(nodes))
+    cacheNodesListPromise && this.storage?.set(this.nodesListKey, JSON.stringify(nodes))
   }
 }
 
