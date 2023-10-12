@@ -373,14 +373,13 @@ class Saturn {
 
     // if storage returns first, update based on cached storage.
     if (nodes === await cacheNodesListPromise) {
-      nodes = nodes && JSON.parse(nodes)
       this.nodes = nodes
     }
 
     // we always want to update from the orchestrator regardless.
     nodes = await orchNodesListPromise
     this.nodes = nodes
-    cacheNodesListPromise && this.storage?.set(this.nodesListKey, JSON.stringify(nodes))
+    cacheNodesListPromise && this.storage?.set(this.nodesListKey, nodes)
   }
 }
 

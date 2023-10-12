@@ -61,7 +61,7 @@ describe('Client Fallback', () => {
     assert.strictEqual(mockStorage.get.mock.calls.length, 2)
 
     // Assert that the set method was invoked with the correct params.
-    assert.deepStrictEqual(mockStorage.set.mock.calls[0].arguments, [TEST_NODES_LIST_KEY, JSON.stringify(expectedNodes)])
+    assert.deepStrictEqual(mockStorage.set.mock.calls[0].arguments, [TEST_NODES_LIST_KEY, expectedNodes])
 
     assert.deepEqual(saturn.nodes, expectedNodes)
 
@@ -80,7 +80,7 @@ describe('Client Fallback', () => {
 
     // Mocking storage object
     const mockStorage = {
-      get: async (key) => { return Promise.resolve(JSON.stringify(expectedNodes.slice(2, 4))) },
+      get: async (key) => { return Promise.resolve(expectedNodes.slice(2, 4)) },
       set: async (key, value) => { return null }
     }
     t.mock.method(mockStorage, 'get')
@@ -98,7 +98,7 @@ describe('Client Fallback', () => {
     assert.strictEqual(mockStorage.get.mock.calls.length, 2)
 
     // Assert that the set method was invoked with the correct params.
-    assert.deepStrictEqual(mockStorage.set.mock.calls[0].arguments, [TEST_NODES_LIST_KEY, JSON.stringify(expectedNodes.slice(0, 2))])
+    assert.deepStrictEqual(mockStorage.set.mock.calls[0].arguments, [TEST_NODES_LIST_KEY, expectedNodes.slice(0, 2)])
 
     assert.deepEqual(saturn.nodes, expectedNodes.slice(0, 2))
   })
