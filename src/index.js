@@ -18,7 +18,7 @@ class Saturn {
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @param {string} [opts.orchURL]
-   * @param {import('./utils/storage.js').Storage} [opts.storage]
+   * @param {import('./storage/index.js').Storage} [opts.storage]
    */
   constructor (opts = {}) {
     this.opts = Object.assign({}, {
@@ -308,7 +308,7 @@ class Saturn {
     let origin = opts.orchURL
 
     let cachedNodesList
-    if (this.storage && this.storage.check()) {
+    if (this.storage) {
       cachedNodesList = this.storage.get(this.nodesListKey)
     }
 

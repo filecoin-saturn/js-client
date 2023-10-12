@@ -8,7 +8,7 @@ import { generateNodes, getMockServer, mockOrchHandler } from './test-utils.js'
 const TEST_DEFAULT_ORCH = 'https://orchestrator.strn.pl/nodes?maxNodes=100'
 const TEST_NODES_LIST_KEY = 'saturn-nodes'
 const TEST_ORIGIN_DOMAIN = 'saturn.ms'
-
+const CLIENT_KEY = 'key'
 describe('Client Fallback', () => {
   test('Nodes are loaded from the orchestrator if no storage is passed', async (t) => {
     const handlers = [
@@ -20,7 +20,7 @@ describe('Client Fallback', () => {
     const expectedNodes = generateNodes(2, TEST_ORIGIN_DOMAIN)
 
     // No Storage is injected
-    const saturn = new Saturn()
+    const saturn = new Saturn({ clientKey: CLIENT_KEY })
     const mockOpts = { orchURL: TEST_DEFAULT_ORCH }
 
     await saturn._loadNodes(mockOpts)
@@ -42,16 +42,14 @@ describe('Client Fallback', () => {
 
     // Mocking storage object
     const mockStorage = {
-      check: () => true,
       get: async (key) => null,
       set: async (key, value) => null,
       delete: async (key) => null
     }
     t.mock.method(mockStorage, 'get')
-    t.mock.method(mockStorage, 'check')
     t.mock.method(mockStorage, 'set')
 
-    const saturn = new Saturn({ storage: mockStorage })
+    const saturn = new Saturn({ storage: mockStorage, clientKey: CLIENT_KEY })
 
     // Mocking options
     const mockOpts = { orchURL: TEST_DEFAULT_ORCH }
@@ -59,7 +57,6 @@ describe('Client Fallback', () => {
     await saturn._loadNodes(mockOpts)
 
     // Assert that all the storage methods were called twice.
-    assert.strictEqual(mockStorage.check.mock.calls.length, 2)
     assert.strictEqual(mockStorage.set.mock.calls.length, 2)
     assert.strictEqual(mockStorage.get.mock.calls.length, 2)
 
@@ -83,15 +80,13 @@ describe('Client Fallback', () => {
 
     // Mocking storage object
     const mockStorage = {
-      check: () => true,
       get: async (key) => { return Promise.resolve(JSON.stringify(expectedNodes.slice(2, 4))) },
       set: async (key, value) => { return null }
     }
     t.mock.method(mockStorage, 'get')
-    t.mock.method(mockStorage, 'check')
     t.mock.method(mockStorage, 'set')
 
-    const saturn = new Saturn({ storage: mockStorage })
+    const saturn = new Saturn({ storage: mockStorage, clientKey: CLIENT_KEY })
 
     // Mocking options
     const mockOpts = { orchURL: TEST_DEFAULT_ORCH }
@@ -99,7 +94,6 @@ describe('Client Fallback', () => {
     await saturn._loadNodes(mockOpts)
 
     // Assert that all the storage methods were called twice.
-    assert.strictEqual(mockStorage.check.mock.calls.length, 2)
     assert.strictEqual(mockStorage.set.mock.calls.length, 2)
     assert.strictEqual(mockStorage.get.mock.calls.length, 2)
 
