@@ -53,6 +53,19 @@ describe('Saturn client', () => {
       await assert.rejects(client.fetchCID(TEST_CID, { connectTimeout: 1 }))
     })
 
+    it('should use external abort controller', async () => {
+      const controller = new AbortController()
+      setTimeout(() => controller.abort(), 5)
+
+      await assert.rejects(
+        client.fetchCID(TEST_CID, { controller }),
+        {
+          name: 'AbortError',
+          message: 'This operation was aborted'
+        }
+      )
+    })
+
     it.skip('should fail when exceeding download timeout', async () => {
       await assert.rejects(client.fetchCID(`${TEST_CID}/blah`, { downloadTimeout: 1 }))
     })

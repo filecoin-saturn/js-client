@@ -64,7 +64,7 @@ class Saturn {
       startTime: new Date()
     }
 
-    const controller = new AbortController()
+    const controller = options.controller ?? new AbortController()
     const connectTimeout = setTimeout(() => {
       controller.abort()
     }, options.connectTimeout)
@@ -105,7 +105,7 @@ class Saturn {
       throw err
     }
 
-    return { res, log }
+    return { res, controller, log }
   }
 
   /**
@@ -118,7 +118,7 @@ class Saturn {
    * @returns {Promise<AsyncIterable<Uint8Array>>}
    */
   async * fetchContent (cidPath, opts = {}) {
-    const { res, log } = await this.fetchCID(cidPath, opts)
+    const { res, controller, log } = await this.fetchCID(cidPath, opts)
 
     async function * metricsIterable (itr) {
       log.numBytesSent = 0
@@ -134,6 +134,8 @@ class Saturn {
       yield * extractVerifiedContent(cidPath, itr)
     } catch (err) {
       log.error = err.message
+      controller.abort()
+
       throw err
     } finally {
       this._finalizeLog(log)
