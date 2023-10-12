@@ -358,7 +358,7 @@ class Saturn {
     }, options.connectTimeout)
 
     const orchResponse = await fetch(url.href, { signal: controller.signal, ...options })
-    const orchNodesList = orchResponse.json()
+    const orchNodesListPromise = orchResponse.json()
     clearTimeout(connectTimeout)
 
     // This promise races fetching nodes list from the orchestrator and
@@ -366,9 +366,9 @@ class Saturn {
     // to insure we have a fallback set as quick as possible
     let nodes
     if (cacheNodesListPromise) {
-      nodes = await Promise.race([orchNodesList, cacheNodesListPromise])
+      nodes = await Promise.race([orchNodesListPromise, cacheNodesListPromise])
     } else {
-      nodes = await orchNodesList
+      nodes = await orchNodesListPromise
     }
 
     // if storage returns first, update based on cached storage.
@@ -378,7 +378,7 @@ class Saturn {
     }
 
     // we always want to update from the orchestrator regardless.
-    nodes = await orchNodesList
+    nodes = await orchNodesListPromise
     this.nodes = nodes
     cacheNodesListPromise && this.storage?.set(this.nodesListKey, JSON.stringify(nodes))
   }
