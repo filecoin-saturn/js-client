@@ -122,19 +122,19 @@ class Saturn {
     let lastError = null
     // we use this to checkpoint at which chunk a request failed.
     // this is temporary until range requests are supported.
-    let lastChunk = 0
+    let byteCountCheckpoint = 0
     for (const origin of this.nodes) {
       opts.url = origin
       try {
-        let chunkCount = 0
+        let byteCount = 0
         const byteChunks = await this.fetchContent(cidPath, opts)
         for await (const chunk of byteChunks) {
-          // avoid sending duplicate chunks.
-          if (chunkCount >= lastChunk) {
+          // avoid sending duplicate chunks
+          if (byteCount >= byteCountCheckpoint) {
             yield chunk
-            chunkCount += 1
+            byteCount += chunk.length
           }
-          lastChunk += 1
+          byteCountCheckpoint += chunk.length
         }
         return
       } catch (err) {
