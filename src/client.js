@@ -5,6 +5,7 @@ import { asAsyncIterable, asyncIteratorToBuffer } from './utils/itr.js'
 import { randomUUID } from './utils/uuid.js'
 import { memoryStorage } from './storage/index.js'
 import { getJWT } from './utils/jwt.js'
+import { isBrowserContext } from './utils/runtime.js'
 
 export class Saturn {
   /**
@@ -34,8 +35,8 @@ export class Saturn {
     this.logs = []
     this.storage = this.opts.storage || memoryStorage()
     this.reportingLogs = process?.env?.NODE_ENV !== 'development'
-    this.hasPerformanceAPI = typeof window !== 'undefined' && window?.performance
-    this.isBrowser = typeof window !== 'undefined'
+    this.hasPerformanceAPI = isBrowserContext && self?.performance
+
     if (this.reportingLogs && this.hasPerformanceAPI) {
       this._monitorPerformanceBuffer()
     }
@@ -69,7 +70,7 @@ export class Saturn {
       controller.abort()
     }, options.connectTimeout)
 
-    if (!this.isBrowser) {
+    if (!isBrowserContext) {
       options.headers = {
         ...(options.headers || {}),
         Authorization: 'Bearer ' + options.jwt
@@ -173,7 +174,7 @@ export class Saturn {
       url.searchParams.set('dag-scope', 'entity')
     }
 
-    if (this.isBrowser) {
+    if (isBrowserContext) {
       url.searchParams.set('jwt', opts.jwt)
     }
 

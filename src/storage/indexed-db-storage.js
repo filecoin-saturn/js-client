@@ -11,7 +11,7 @@ const DEFAULT_SATURN_STORAGE_NAME = 'saturn-client'
  * @returns {import('./index.js').Storage}
  */
 export function indexedDbStorage () {
-  const indexedDbExists = (typeof window !== 'undefined') && window?.indexedDB
+  const indexedDbExists = (typeof self !== 'undefined') && self?.indexedDB
   let dbPromise
   if (indexedDbExists) {
     dbPromise = openDB(DEFAULT_IDB_STORAGE_NAME, DEFAULT_IDB_VERSION, {
