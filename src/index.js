@@ -331,25 +331,21 @@ class Saturn {
     // This promise races fetching nodes list from the orchestrator and
     // and the provided storage object (localStorage, sessionStorage, etc.)
     // to insure we have a fallback set as quick as possible
-    let result
+    let nodes
     if (cachedNodesList) {
-      result = await Promise.race([orchNodesList, cachedNodesList])
+      nodes = await Promise.race([orchNodesList, cachedNodesList])
     } else {
-      result = await orchNodesList
+      nodes = await orchNodesList
     }
 
-    let nodes
-    // if the orchestrator responds first then always refresh and ignore the cached list.
-    if (result === await orchNodesList) {
-      nodes = result
-      this.nodes = nodes
-    } else {
-      nodes = result
-      this.nodes = nodes && JSON.parse(nodes)
-      // We still want to retrieve the latest list from the orchestrator and update the cache.
-      nodes = await orchNodesList
+    // let nodes
+    if (nodes === await cachedNodesList) {
+      nodes = nodes && JSON.parse(nodes)
       this.nodes = nodes
     }
+
+    nodes = await orchNodesList
+    this.nodes = nodes
     cachedNodesList && this.storage?.set(this.nodesListKey, JSON.stringify(nodes))
   }
 }
