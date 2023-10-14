@@ -1,27 +1,12 @@
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { describe, it } from 'node:test'
-import { resolve, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { getFixturePath, concatChunks } from './test-utils.js'
 
 import { CarReader, CarWriter } from '@ipld/car'
 import { CID } from 'multiformats/cid'
 
 import { extractVerifiedContent } from '#src/utils/car.js'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-
-function getFixturePath (filename) {
-  return resolve(__dirname, `./fixtures/${filename}`)
-}
-
-async function concatChunks (itr) {
-  const arr = []
-  for await (const chunk of itr) {
-    arr.push(chunk)
-  }
-  return new Uint8Array(...arr)
-}
 
 describe('CAR Verification', () => {
   it('should extract content from a valid CAR', async () => {
@@ -149,8 +134,7 @@ describe('CAR Verification', () => {
 
     await assert.rejects(
       async () => {
-        for await (const _ of extractVerifiedContent(cidPath, out)) {
-        }
+        for await (const _ of extractVerifiedContent(cidPath, out)) {}
       },
       {
         name: 'VerificationError',

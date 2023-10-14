@@ -3,7 +3,13 @@
 
 import { RestHandler, rest } from 'msw'
 import { setupServer } from 'msw/node'
+import { resolve, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+import fs from 'fs'
 const HTTP_STATUS_OK = 200
+const __dirname = dirname(fileURLToPath(import.meta.url))
+process.env.TESTING = 'true'
 
 /**
  *
@@ -61,6 +67,35 @@ export function mockOrchHandler (count, orchURL, originDomain, delay = 0) {
 }
 
 /**
+ * Generates a mock handler to mimick Saturn's orchestrator /nodes endpoint.
+ *
+ * @param {string} authURL - orchestratorUrl
+ * @returns {RestHandler<any>}
+ */
+export function mockJWT (authURL) {
+  if (!authURL.startsWith('http')) {
+    authURL = `https://${authURL}`
+  }
+  return rest.get(authURL, (req, res, ctx) => {
+    const clientKey = req.url.searchParams.get('clientKey')
+    if (clientKey) {
+      return res(
+        ctx.json({
+          token: 'MOCK_JWT_TOKEN'
+        })
+      )
+    } else {
+      return res(
+        ctx.json({
+          token: null,
+          message: 'Failed to refresh jwt'
+        })
+      )
+    }
+  })
+}
+
+/**
  * Generates mock servers to act as L1 nodes.
  *
  * @param {number} count - amount of nodes to mock
@@ -71,14 +106,34 @@ export function mockNodesHandlers (count, originDomain) {
   const nodes = generateNodes(count, originDomain)
 
   const handlers = nodes.map((node) => {
-    return rest.get(node.url, (req, res, ctx) => {
+    const url = `${node.url}/ipfs/:cid`
+    return rest.get(url, (req, res, ctx) => {
+      const filepath = getFixturePath('hello.car')
+      const fileContents = fs.readFileSync(filepath)
       return res(
         ctx.status(HTTP_STATUS_OK),
-        ctx.json({ data: 'Test Block' })
+        ctx.body(fileContents)
       )
     })
   })
   return handlers
+}
+
+export function getFixturePath (filename) {
+  return resolve(__dirname, `./fixtures/${filename}`)
+}
+
+export async function concatChunks (itr) {
+  const arr = []
+  for await (const chunk of itr) {
+    if (chunk instanceof Uint8Array) {
+      arr.push(...chunk)
+    } else {
+      const uInt8ArrayChunk = new Uint8Array(chunk)
+      arr.push(...uInt8ArrayChunk)
+    }
+  }
+  return new Uint8Array(arr)
 }
 
 /**

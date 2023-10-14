@@ -7,6 +7,7 @@ import { asAsyncIterable, asyncIteratorToBuffer } from './utils/itr.js'
 import { randomUUID } from './utils/uuid.js'
 import { memoryStorage } from './storage/index.js'
 import { getJWT } from './utils/jwt.js'
+import { parseUrl } from './utils/url.js'
 
 class Saturn {
   /**
@@ -26,6 +27,7 @@ class Saturn {
       cdnURL: 'saturn.ms',
       logURL: 'https://twb3qukm2i654i3tnvx36char40aymqq.lambda-url.us-west-2.on.aws/',
       orchURL: 'https://orchestrator.strn.pl/nodes?maxNodes=100',
+      authURL: 'https://saturn.auth',
       connectTimeout: 5_000,
       downloadTimeout: 0
     }, opts)
@@ -62,10 +64,8 @@ class Saturn {
     CID.parse(cid)
 
     const jwt = await getJWT(this.opts, this.storage)
-
     const options = Object.assign({}, this.opts, { format: 'car', jwt }, opts)
     const url = this.createRequestURL(cidPath, options)
-
     const log = {
       url,
       startTime: new Date()
@@ -82,10 +82,9 @@ class Saturn {
         Authorization: 'Bearer ' + options.jwt
       }
     }
-
     let res
     try {
-      res = await fetch(url, { signal: controller.signal, ...options })
+      res = await fetch(parseUrl(url), { signal: controller.signal, ...options })
 
       clearTimeout(connectTimeout)
 
@@ -115,16 +114,17 @@ class Saturn {
     return { res, log }
   }
 
-  async * fetchContentWithFallback (cidPath, opts = {}, origins) {
+  async * fetchContentWithFallback (cidPath, opts = {}) {
     if (this.nodes.length === 0) {
       await this.loadNodesPromise
     }
+
     let lastError = null
     // we use this to checkpoint at which chunk a request failed.
     // this is temporary until range requests are supported.
     let byteCountCheckpoint = 0
     for (const origin of this.nodes) {
-      opts.url = origin
+      opts.url = origin.url
       try {
         let byteCount = 0
         const byteChunks = await this.fetchContent(cidPath, opts)
@@ -136,11 +136,11 @@ class Saturn {
             if (remainingBytes < chunk.length) {
               yield chunk.slice(remainingBytes)
             }
-            byteCount += chunk.length
           } else {
             yield chunk
             byteCountCheckpoint += chunk.length
           }
+          byteCount += chunk.length
         }
         return
       } catch (err) {
@@ -210,7 +210,7 @@ class Saturn {
    * @returns {URL}
    */
   createRequestURL (cidPath, opts) {
-    let origin = opts.url
+    let origin = opts.url || opts.cdnURL
     if (!origin.startsWith('http')) {
       origin = `https://${origin}`
     }
@@ -363,7 +363,7 @@ class Saturn {
       controller.abort()
     }, options.connectTimeout)
 
-    const orchResponse = await fetch(url.href, { signal: controller.signal, ...options })
+    const orchResponse = await fetch(parseUrl(url), { signal: controller.signal, ...options })
     const orchNodesListPromise = orchResponse.json()
     clearTimeout(connectTimeout)
 
@@ -381,7 +381,6 @@ class Saturn {
     if (nodes === await cacheNodesListPromise) {
       this.nodes = nodes
     }
-
     // we always want to update from the orchestrator regardless.
     nodes = await orchNodesListPromise
     this.nodes = nodes
