@@ -62,7 +62,6 @@ class Saturn {
   async fetchCID (cidPath, opts = {}) {
     const [cid] = (cidPath ?? '').split('/')
     CID.parse(cid)
-
     const jwt = await getJWT(this.opts, this.storage)
     const options = Object.assign({}, this.opts, { format: 'car', jwt }, opts)
     const url = this.createRequestURL(cidPath, options)
@@ -243,7 +242,6 @@ class Saturn {
    */
   reportLogs (log) {
     if (!this.reportingLogs) return
-
     this.logs.push(log)
     this.reportLogsTimeout && clearTimeout(this.reportLogsTimeout)
     this.reportLogsTimeout = setTimeout(this._reportLogs.bind(this), 3_000)

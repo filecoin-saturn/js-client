@@ -7,7 +7,9 @@ import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import fs from 'fs'
+
 const HTTP_STATUS_OK = 200
+
 const __dirname = dirname(fileURLToPath(import.meta.url))
 process.env.TESTING = 'true'
 
@@ -136,6 +138,9 @@ export async function concatChunks (itr) {
   return new Uint8Array(arr)
 }
 
+export const MSW_SERVER_OPTS = {
+  onUnhandledRequest: 'bypass'
+}
 /**
  * @param {RestHandler<any>[]} handlers - amount of nodes to mock
  */
