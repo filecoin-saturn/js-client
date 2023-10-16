@@ -40,10 +40,8 @@ export class Saturn {
     this.logs = []
     this.nodes = []
     this.nodesListKey = 'saturn-nodes'
-    this.storage = this.opts.storage || memoryStorage()
     this.reportingLogs = process?.env?.NODE_ENV !== 'development'
-    this.hasPerformanceAPI = typeof window !== 'undefined' && window?.performance
-    this.isBrowser = typeof window !== 'undefined'
+    this.hasPerformanceAPI = isBrowserContext && self?.performance
     if (this.reportingLogs && this.hasPerformanceAPI) {
       this._monitorPerformanceBuffer()
     }
