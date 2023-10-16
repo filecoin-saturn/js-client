@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict'
 import { describe, mock, test } from 'node:test'
 
-import Saturn from '../src/index.js'
+import { Saturn } from '#src/index.js'
 import { concatChunks, generateNodes, getMockServer, mockJWT, mockNodesHandlers, mockOrchHandler, mockSaturnOriginHandler, MSW_SERVER_OPTS } from './test-utils.js'
 
 const TEST_DEFAULT_ORCH = 'https://orchestrator.strn.pl/nodes?maxNodes=100'
