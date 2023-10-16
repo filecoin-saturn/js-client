@@ -4,12 +4,11 @@ module.exports = {
   target: 'web',
   entry: './src/index.js',
   output: {
-    filename: 'strn.min.js',
+    filename: 'dist/strn.min.js',
     path: path.resolve(__dirname),
     library: {
-      name: 'Saturn',
+      name: 'SaturnModule',
       type: 'var',
-      export: 'default',
     }
   }
 };

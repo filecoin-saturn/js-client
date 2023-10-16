@@ -8,6 +8,7 @@ import { randomUUID } from './utils/uuid.js'
 import { memoryStorage } from './storage/index.js'
 import { getJWT } from './utils/jwt.js'
 import { parseUrl, addHttpPrefix } from './utils/url.js'
+import { isBrowserContext } from './utils/runtime.js'
 
 export class Saturn {
   /**
@@ -27,7 +28,7 @@ export class Saturn {
       cdnURL: 'saturn.ms',
       logURL: 'https://twb3qukm2i654i3tnvx36char40aymqq.lambda-url.us-west-2.on.aws/',
       orchURL: 'https://orchestrator.strn.pl/nodes?maxNodes=100',
-      authURL: 'https://saturn.auth',
+      authURL: 'https://fz3dyeyxmebszwhuiky7vggmsu0rlkoy.lambda-url.us-west-2.on.aws/',
       connectTimeout: 5_000,
       downloadTimeout: 0
     }, opts)
@@ -46,7 +47,7 @@ export class Saturn {
     if (this.reportingLogs && this.hasPerformanceAPI) {
       this._monitorPerformanceBuffer()
     }
-
+    this.storage = this.opts.storage || memoryStorage()
     this.loadNodesPromise = this._loadNodes(this.opts)
   }
 
@@ -62,20 +63,23 @@ export class Saturn {
   async fetchCID (cidPath, opts = {}) {
     const [cid] = (cidPath ?? '').split('/')
     CID.parse(cid)
+
     const jwt = await getJWT(this.opts, this.storage)
+
     const options = Object.assign({}, this.opts, { format: 'car', jwt }, opts)
     const url = this.createRequestURL(cidPath, options)
+
     const log = {
       url,
       startTime: new Date()
     }
 
-    const controller = new AbortController()
+    const controller = options.controller ?? new AbortController()
     const connectTimeout = setTimeout(() => {
       controller.abort()
     }, options.connectTimeout)
 
-    if (!this.isBrowser) {
+    if (!isBrowserContext) {
       options.headers = {
         ...(options.headers || {}),
         Authorization: 'Bearer ' + options.jwt
@@ -110,7 +114,7 @@ export class Saturn {
       throw err
     }
 
-    return { res, log }
+    return { res, controller, log }
   }
 
   /**
@@ -185,7 +189,7 @@ export class Saturn {
    * @returns {Promise<AsyncIterable<Uint8Array>>}
    */
   async * fetchContent (cidPath, opts = {}) {
-    const { res, log } = await this.fetchCID(cidPath, opts)
+    const { res, controller, log } = await this.fetchCID(cidPath, opts)
 
     async function * metricsIterable (itr) {
       log.numBytesSent = 0
@@ -201,6 +205,8 @@ export class Saturn {
       yield * extractVerifiedContent(cidPath, itr)
     } catch (err) {
       log.error = err.message
+      controller.abort()
+
       throw err
     } finally {
       this._finalizeLog(log)
@@ -214,15 +220,10 @@ export class Saturn {
    * @param {('car'|'raw')} [opts.format]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
-   * @param origin
    * @returns {Promise<Uint8Array>}
    */
   async fetchContentBuffer (cidPath, opts = {}) {
     return await asyncIteratorToBuffer(this.fetchContent(cidPath, opts))
-  }
-
-  async * extractVerifiedContent (cidPath, carStream) {
-    yield * extractVerifiedContent(cidPath, carStream)
   }
 
   /**
@@ -241,7 +242,7 @@ export class Saturn {
       url.searchParams.set('dag-scope', 'entity')
     }
 
-    if (this.isBrowser) {
+    if (isBrowserContext) {
       url.searchParams.set('jwt', opts.jwt)
     }
 
@@ -404,5 +405,3 @@ export class Saturn {
     cacheNodesListPromise && this.storage?.set(this.nodesListKey, nodes)
   }
 }
-
-export default Saturn

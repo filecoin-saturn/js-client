@@ -7,6 +7,7 @@ import { concatChunks, generateNodes, getMockServer, mockJWT, mockNodesHandlers,
 
 const TEST_DEFAULT_ORCH = 'https://orchestrator.strn.pl/nodes?maxNodes=100'
 const TEST_NODES_LIST_KEY = 'saturn-nodes'
+const TEST_AUTH = 'https://fz3dyeyxmebszwhuiky7vggmsu0rlkoy.lambda-url.us-west-2.on.aws/'
 const TEST_ORIGIN_DOMAIN = 'saturn.ms'
 const CLIENT_KEY = 'key'
 describe('Client Fallback', () => {
@@ -108,7 +109,7 @@ describe('Client Fallback', () => {
   test('Content Fallback fetches a cid properly', async (t) => {
     const handlers = [
       mockOrchHandler(2, TEST_DEFAULT_ORCH, 'saturn.ms'),
-      mockJWT('saturn.auth'),
+      mockJWT(TEST_AUTH),
       mockSaturnOriginHandler(TEST_ORIGIN_DOMAIN, 0, true),
       ...mockNodesHandlers(2, TEST_ORIGIN_DOMAIN)
     ]
@@ -141,7 +142,7 @@ describe('Client Fallback', () => {
   test('should fetch content from the first node successfully', async () => {
     const handlers = [
       mockOrchHandler(2, TEST_DEFAULT_ORCH, 'saturn.ms'),
-      mockJWT('saturn.auth'),
+      mockJWT(TEST_AUTH),
       ...mockNodesHandlers(2, TEST_ORIGIN_DOMAIN)
     ]
 
@@ -169,7 +170,7 @@ describe('Client Fallback', () => {
     const numNodes = 3
     const handlers = [
       mockOrchHandler(numNodes, TEST_DEFAULT_ORCH, 'saturn.ms'),
-      mockJWT('saturn.auth'),
+      mockJWT(TEST_AUTH),
       ...mockNodesHandlers(numNodes, TEST_ORIGIN_DOMAIN)
     ]
 
@@ -192,15 +193,15 @@ describe('Client Fallback', () => {
     assert(error)
     assert.strictEqual(error.message, 'All attempts to fetch content have failed. Last error: Fetch error')
     assert.strictEqual(fetchContentMock.mock.calls.length, numNodes + 1)
-    server.close()
     mock.reset()
+    server.close()
   })
 
   test('Handles fallback with chunk overlap correctly', async () => {
     const numNodes = 3
     const handlers = [
       mockOrchHandler(numNodes, TEST_DEFAULT_ORCH, 'saturn.ms'),
-      mockJWT('saturn.auth'),
+      mockJWT(TEST_AUTH),
       ...mockNodesHandlers(numNodes, TEST_ORIGIN_DOMAIN)
     ]
 
@@ -239,7 +240,7 @@ describe('Client Fallback', () => {
     const numNodes = 3
     const handlers = [
       mockOrchHandler(numNodes, TEST_DEFAULT_ORCH, 'saturn.ms'),
-      mockJWT('saturn.auth'),
+      mockJWT(TEST_AUTH),
       ...mockNodesHandlers(numNodes, TEST_ORIGIN_DOMAIN)
     ]
 
