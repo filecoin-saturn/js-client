@@ -7,7 +7,7 @@ import { asAsyncIterable, asyncIteratorToBuffer } from './utils/itr.js'
 import { randomUUID } from './utils/uuid.js'
 import { memoryStorage } from './storage/index.js'
 import { getJWT } from './utils/jwt.js'
-import { parseUrl } from './utils/url.js'
+import { parseUrl, addHttpPrefix } from './utils/url.js'
 
 class Saturn {
   /**
@@ -114,10 +114,6 @@ class Saturn {
   }
 
   async * fetchContentWithFallback (cidPath, opts = {}) {
-    if (this.nodes.length === 0) {
-      await this.loadNodesPromise
-    }
-
     let lastError = null
     // we use this to checkpoint at which chunk a request failed.
     // this is temporary until range requests are supported.
@@ -141,6 +137,18 @@ class Saturn {
         byteCount += chunk.length
       }
     }.bind(this)
+
+    if (this.nodes.length === 0) {
+      // fetch from origin in the case that no nodes are loaded
+      opts.url = this.opts.cdnURL
+      try {
+        yield * fetchContent()
+        return
+      } catch (err) {
+        lastError = err
+        await this.loadNodesPromise
+      }
+    }
 
     for (const origin of this.nodes) {
       opts.url = origin.url
@@ -215,9 +223,7 @@ class Saturn {
    */
   createRequestURL (cidPath, opts) {
     let origin = opts.url || opts.cdnURL
-    if (!origin.startsWith('http')) {
-      origin = `https://${origin}`
-    }
+    origin = addHttpPrefix(origin)
     const url = new URL(`${origin}/ipfs/${cidPath}`)
 
     url.searchParams.set('format', opts.format)
@@ -354,9 +360,7 @@ class Saturn {
       cacheNodesListPromise = this.storage.get(this.nodesListKey)
     }
 
-    if (!origin.startsWith('http')) {
-      origin = `https://${origin}`
-    }
+    origin = addHttpPrefix(origin)
 
     const url = new URL(origin)
     const controller = new AbortController()

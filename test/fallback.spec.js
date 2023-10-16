@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { describe, mock, test } from 'node:test'
 
 import Saturn from '../src/index.js'
-import { concatChunks, generateNodes, getMockServer, mockJWT, mockNodesHandlers, mockOrchHandler, MSW_SERVER_OPTS } from './test-utils.js'
+import { concatChunks, generateNodes, getMockServer, mockJWT, mockNodesHandlers, mockOrchHandler, mockSaturnOriginHandler, MSW_SERVER_OPTS } from './test-utils.js'
 
 const TEST_DEFAULT_ORCH = 'https://orchestrator.strn.pl/nodes?maxNodes=100'
 const TEST_NODES_LIST_KEY = 'saturn-nodes'
@@ -109,6 +109,7 @@ describe('Client Fallback', () => {
     const handlers = [
       mockOrchHandler(2, TEST_DEFAULT_ORCH, 'saturn.ms'),
       mockJWT('saturn.auth'),
+      mockSaturnOriginHandler(TEST_ORIGIN_DOMAIN, 0, true),
       ...mockNodesHandlers(2, TEST_ORIGIN_DOMAIN)
     ]
     const server = getMockServer(handlers)
@@ -190,7 +191,7 @@ describe('Client Fallback', () => {
 
     assert(error)
     assert.strictEqual(error.message, 'All attempts to fetch content have failed. Last error: Fetch error')
-    assert.strictEqual(fetchContentMock.mock.calls.length, numNodes)
+    assert.strictEqual(fetchContentMock.mock.calls.length, numNodes + 1)
     server.close()
     mock.reset()
   })
@@ -288,6 +289,7 @@ describe('Client Fallback', () => {
 
     content = await saturn.fetchContentWithFallback('some-cid-path')
     buffer = await concatChunks(content)
+
     assert.deepEqual(buffer, expectedContent)
     assert.strictEqual(fetchContentMock.mock.calls.length, 2)
 

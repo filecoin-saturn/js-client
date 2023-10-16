@@ -7,6 +7,7 @@ import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import fs from 'fs'
+import { addHttpPrefix } from '../src/utils/url.js'
 
 const HTTP_STATUS_OK = 200
 
@@ -47,6 +48,30 @@ export function generateNodes (count, originDomain) {
 /**
  * Generates a mock handler to mimick Saturn's orchestrator /nodes endpoint.
  *
+ * @param {string} cdnURL - orchestratorUrl
+ * @param {number} delay - request delay in ms
+ * @param {boolean} error
+ * @returns {RestHandler<any>}
+ */
+export function mockSaturnOriginHandler (cdnURL, delay = 0, error = false) {
+  cdnURL = addHttpPrefix(cdnURL)
+  return rest.get(cdnURL, (req, res, ctx) => {
+    if (error) {
+      throw Error('Simulated Error')
+    }
+    const filepath = getFixturePath('hello.car')
+    const fileContents = fs.readFileSync(filepath)
+    return res(
+      ctx.delay(delay),
+      ctx.status(HTTP_STATUS_OK),
+      ctx.body(fileContents)
+    )
+  })
+}
+
+/**
+ * Generates a mock handler to mimick Saturn's orchestrator /nodes endpoint.
+ *
  * @param {number} count - amount of nodes
  * @param {string} orchURL - orchestratorUrl
  * @param {string} originDomain - saturn origin domain
@@ -54,9 +79,7 @@ export function generateNodes (count, originDomain) {
  * @returns {RestHandler<any>}
  */
 export function mockOrchHandler (count, orchURL, originDomain, delay = 0) {
-  if (!orchURL.startsWith('http')) {
-    orchURL = `https://${orchURL}`
-  }
+  orchURL = addHttpPrefix(orchURL)
 
   const nodes = generateNodes(count, originDomain)
   return rest.get(orchURL, (req, res, ctx) => {
@@ -75,9 +98,7 @@ export function mockOrchHandler (count, orchURL, originDomain, delay = 0) {
  * @returns {RestHandler<any>}
  */
 export function mockJWT (authURL) {
-  if (!authURL.startsWith('http')) {
-    authURL = `https://${authURL}`
-  }
+  authURL = addHttpPrefix(authURL)
   return rest.get(authURL, (req, res, ctx) => {
     const clientKey = req.url.searchParams.get('clientKey')
     if (clientKey) {
