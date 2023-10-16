@@ -122,25 +122,30 @@ class Saturn {
     // we use this to checkpoint at which chunk a request failed.
     // this is temporary until range requests are supported.
     let byteCountCheckpoint = 0
+
+    const fetchContent = async function * () {
+      let byteCount = 0
+      const byteChunks = await this.fetchContent(cidPath, opts)
+      for await (const chunk of byteChunks) {
+        // avoid sending duplicate chunks
+        if (byteCount < byteCountCheckpoint) {
+          // checks for overlapping chunks
+          const remainingBytes = byteCountCheckpoint - byteCount
+          if (remainingBytes < chunk.length) {
+            yield chunk.slice(remainingBytes)
+          }
+        } else {
+          yield chunk
+          byteCountCheckpoint += chunk.length
+        }
+        byteCount += chunk.length
+      }
+    }.bind(this)
+
     for (const origin of this.nodes) {
       opts.url = origin.url
       try {
-        let byteCount = 0
-        const byteChunks = await this.fetchContent(cidPath, opts)
-        for await (const chunk of byteChunks) {
-          // avoid sending duplicate chunks
-          if (byteCount < byteCountCheckpoint) {
-            // checks for overlapping chunks
-            const remainingBytes = byteCountCheckpoint - byteCount
-            if (remainingBytes < chunk.length) {
-              yield chunk.slice(remainingBytes)
-            }
-          } else {
-            yield chunk
-            byteCountCheckpoint += chunk.length
-          }
-          byteCount += chunk.length
-        }
+        yield * fetchContent()
         return
       } catch (err) {
         lastError = err

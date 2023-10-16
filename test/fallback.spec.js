@@ -190,7 +190,7 @@ describe('Client Fallback', () => {
 
     assert(error)
     assert.strictEqual(error.message, 'All attempts to fetch content have failed. Last error: Fetch error')
-    assert.strictEqual(fetchContentMock.mock.calls.length, numNodes) // Assuming 3 nodes.
+    assert.strictEqual(fetchContentMock.mock.calls.length, numNodes)
     server.close()
     mock.reset()
   })
