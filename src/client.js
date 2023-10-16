@@ -388,7 +388,7 @@ export class Saturn {
     // to insure we have a fallback set as quick as possible
     let nodes
     if (cacheNodesListPromise) {
-      nodes = await Promise.race([orchNodesListPromise, cacheNodesListPromise])
+      nodes = await Promise.any([orchNodesListPromise, cacheNodesListPromise])
     } else {
       nodes = await orchNodesListPromise
     }
