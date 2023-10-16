@@ -20,6 +20,7 @@ export class Saturn {
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @param {string} [opts.orchURL]
+   * @param {number} [opts.fallbackLimit]
    * @param {import('./storage/index.js').Storage} [opts.storage]
    */
   constructor (opts = {}) {
@@ -29,6 +30,7 @@ export class Saturn {
       logURL: 'https://twb3qukm2i654i3tnvx36char40aymqq.lambda-url.us-west-2.on.aws/',
       orchURL: 'https://orchestrator.strn.pl/nodes?maxNodes=100',
       authURL: 'https://fz3dyeyxmebszwhuiky7vggmsu0rlkoy.lambda-url.us-west-2.on.aws/',
+      fallbackLimit: 5,
       connectTimeout: 5_000,
       downloadTimeout: 0
     }, opts)
@@ -162,7 +164,11 @@ export class Saturn {
       }
     }
 
+    let fallbackCount = 0
     for (const origin of this.nodes) {
+      if (fallbackCount > this.opts.fallbackLimit) {
+        return
+      }
       opts.url = origin.url
       try {
         yield * fetchContent()
@@ -170,6 +176,7 @@ export class Saturn {
       } catch (err) {
         lastError = err
       }
+      fallbackCount += 1
     }
 
     if (lastError) {
