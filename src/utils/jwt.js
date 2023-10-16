@@ -16,7 +16,7 @@ export function isJwtValid (jwt) {
  * @param {object} opts
  * @param {string} opts.clientKey
  * @param {string} opts.authURL
- * @param {import('./utils/storage.js').Storage} storage
+ * @param {import('../storage/index.js').Storage} storage
  * @returns {Promise<string>}
  */
 export async function getJWT (opts, storage) {

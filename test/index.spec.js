@@ -1,12 +1,11 @@
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { describe, it, before, after } from 'node:test'
-
-import Saturn from '#src/index.js'
 import { getMockServer, mockJWT, MSW_SERVER_OPTS } from './test-utils.js'
+import { Saturn } from '#src/index.js'
 
 const TEST_CID = 'QmXjYBY478Cno4jzdCcPy4NcJYFrwHZ51xaCP8vUwN9MGm'
-
+const TEST_AUTH = 'https://fz3dyeyxmebszwhuiky7vggmsu0rlkoy.lambda-url.us-west-2.on.aws/'
 const clientKey = 'abc123'
 
 describe('Saturn client', () => {
@@ -41,7 +40,7 @@ describe('Saturn client', () => {
   describe('Fetch a CID', () => {
     const client = new Saturn({ clientKey })
     const handlers = [
-      mockJWT('saturn.auth')
+      mockJWT(TEST_AUTH)
     ]
     const server = getMockServer(handlers)
 
@@ -64,6 +63,19 @@ describe('Saturn client', () => {
       await assert.rejects(client.fetchCID(TEST_CID, { connectTimeout: 1 }))
     })
 
+    it('should use external abort controller', async () => {
+      const controller = new AbortController()
+      setTimeout(() => controller.abort(), 5)
+
+      await assert.rejects(
+        client.fetchCID(TEST_CID, { controller }),
+        {
+          name: 'AbortError',
+          message: 'This operation was aborted'
+        }
+      )
+    })
+
     it.skip('should fail when exceeding download timeout', async () => {
       await assert.rejects(client.fetchCID(`${TEST_CID}/blah`, { downloadTimeout: 1 }))
     })
@@ -71,7 +83,7 @@ describe('Saturn client', () => {
 
   describe('Logging', () => {
     const handlers = [
-      mockJWT('saturn.auth')
+      mockJWT(TEST_AUTH)
     ]
     const server = getMockServer(handlers)
     const client = new Saturn({ clientKey, clientId: 'tesd' })
