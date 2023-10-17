@@ -5,7 +5,7 @@ import { describe, mock, test } from 'node:test'
 import { Saturn } from '#src/index.js'
 import { concatChunks, generateNodes, getMockServer, mockJWT, mockNodesHandlers, mockOrchHandler, mockSaturnOriginHandler, MSW_SERVER_OPTS } from './test-utils.js'
 
-const TEST_DEFAULT_ORCH = 'https://orchestrator.strn.pl/nodes?maxNodes=100'
+const TEST_DEFAULT_ORCH = 'https://orchestrator.strn.pl/nodes'
 const TEST_NODES_LIST_KEY = 'saturn-nodes'
 const TEST_AUTH = 'https://fz3dyeyxmebszwhuiky7vggmsu0rlkoy.lambda-url.us-west-2.on.aws/'
 const TEST_ORIGIN_DOMAIN = 'saturn.ms'
@@ -277,10 +277,14 @@ describe('Client Fallback', () => {
       callCount++
       if (callCount === 1) {
         yield Buffer.from('chunk1-')
-        yield Buffer.from('overlap')
         throw new Error('First call error')
       }
       if (callCount === 2) {
+        yield Buffer.from('chunk1')
+        yield Buffer.from('-overlap')
+        throw new Error('Second call error')
+      }
+      if (callCount === 3) {
         yield Buffer.from('chunk1-overlap')
         yield Buffer.from('chunk2')
       }
@@ -292,7 +296,7 @@ describe('Client Fallback', () => {
     buffer = await concatChunks(content)
 
     assert.deepEqual(buffer, expectedContent)
-    assert.strictEqual(fetchContentMock.mock.calls.length, 2)
+    assert.strictEqual(fetchContentMock.mock.calls.length, 3)
 
     server.close()
     mock.reset()

@@ -143,6 +143,7 @@ export class Saturn {
           const remainingBytes = byteCountCheckpoint - byteCount
           if (remainingBytes < chunk.length) {
             yield chunk.slice(remainingBytes)
+            byteCountCheckpoint += chunk.length - remainingBytes
           }
         } else {
           yield chunk
