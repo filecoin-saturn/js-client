@@ -42,10 +42,17 @@
     "webpack-cli": "^4.10.0"
   },
   "eslintConfig": {
+    "plugins": [
+      "jsdoc",
+      "promise"
+    ],
     "extends": "ipfs",
     "parserOptions": {
-      "ecmaVersion": "latest",
-      "sourceType": "module"
+      "sourceType": "module",
+      "ecmaVersion": "latest"
+    },
+    "rules": {
+      "jsdoc/no-undefined-types": 1
     }
   },
   "imports": {
