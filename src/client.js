@@ -11,6 +11,7 @@ import { parseUrl, addHttpPrefix } from './utils/url.js'
 import { isBrowserContext } from './utils/runtime.js'
 
 export class Saturn {
+  static nodesListKey = 'saturn-nodes'
   /**
    *
    * @param {object} [opts={}]
@@ -41,7 +42,6 @@ export class Saturn {
 
     this.logs = []
     this.nodes = []
-    this.nodesListKey = 'saturn-nodes'
     this.reportingLogs = process?.env?.NODE_ENV !== 'development'
     this.hasPerformanceAPI = isBrowserContext && self?.performance
     if (this.reportingLogs && this.hasPerformanceAPI) {
@@ -374,7 +374,7 @@ export class Saturn {
 
     let cacheNodesListPromise
     if (this.storage) {
-      cacheNodesListPromise = this.storage.get(this.nodesListKey)
+      cacheNodesListPromise = this.storage.get(Saturn.nodesListKey)
     }
 
     origin = addHttpPrefix(origin)
@@ -408,6 +408,6 @@ export class Saturn {
     // we always want to update from the orchestrator regardless.
     nodes = await orchNodesListPromise
     this.nodes = nodes
-    cacheNodesListPromise && this.storage?.set(this.nodesListKey, nodes)
+    cacheNodesListPromise && this.storage?.set(Saturn.nodesListKey, nodes)
   }
 }
