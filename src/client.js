@@ -21,7 +21,7 @@ export class Saturn {
   constructor (opts = {}) {
     this.opts = Object.assign({}, {
       clientId: randomUUID(),
-      cdnURL: 'saturn.ms',
+      cdnURL: 'l1s.saturn.ms',
       logURL: 'https://twb3qukm2i654i3tnvx36char40aymqq.lambda-url.us-west-2.on.aws/',
       authURL: 'https://fz3dyeyxmebszwhuiky7vggmsu0rlkoy.lambda-url.us-west-2.on.aws/',
       connectTimeout: 5_000,
