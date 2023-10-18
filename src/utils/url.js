@@ -6,11 +6,14 @@
  * @returns {URL|string}
  */
 export function parseUrl (url) {
-  // This is a temp function to resolve URLs for mock testing
+  try {
+    // This is a temp function to resolve URLs for mock testing
   // See issue here: https://github.com/mswjs/msw/issues/1597
-  if (process.env.TESTING) {
-    return url.toJSON()
-  }
+    if (process?.env?.TESTING) {
+      return url.toJSON()
+    }
+  } catch (e) {}
+
   return url
 }
 

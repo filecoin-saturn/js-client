@@ -408,6 +408,6 @@ export class Saturn {
     // we always want to update from the orchestrator regardless.
     nodes = await orchNodesListPromise
     this.nodes = nodes
-    cacheNodesListPromise && this.storage?.set(Saturn.nodesListKey, nodes)
+    this.storage?.set(Saturn.nodesListKey, nodes)
   }
 }
