@@ -18,7 +18,7 @@ export class Saturn {
    * @param {number} [opts.downloadTimeout=0]
    * @param {import('./storage/index.js').Storage} [opts.storage]
    */
-  constructor (opts = {}) {
+  constructor(opts = {}) {
     this.opts = Object.assign({}, {
       clientId: randomUUID(),
       cdnURL: 'l1s.saturn.ms',
@@ -51,7 +51,7 @@ export class Saturn {
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<object>}
    */
-  async fetchCID (cidPath, opts = {}) {
+  async fetchCID(cidPath, opts = {}) {
     const [cid] = (cidPath ?? '').split('/')
     CID.parse(cid)
 
@@ -84,7 +84,6 @@ export class Saturn {
       clearTimeout(connectTimeout)
 
       const { headers } = res
-      log.ttfbMs = new Date() - log.startTime
       log.httpStatusCode = res.status
       log.cacheHit = headers.get('saturn-cache-status') === 'HIT'
       log.nodeId = headers.get('saturn-node-id')
@@ -96,6 +95,7 @@ export class Saturn {
           `Non OK response received: ${res.status} ${res.statusText}`
         )
       }
+      log.ttfbMs = new Date() - log.startTime
     } catch (err) {
       if (!res) {
         log.error = err.message
@@ -118,10 +118,10 @@ export class Saturn {
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<AsyncIterable<Uint8Array>>}
    */
-  async * fetchContent (cidPath, opts = {}) {
+  async * fetchContent(cidPath, opts = {}) {
     const { res, controller, log } = await this.fetchCID(cidPath, opts)
 
-    async function * metricsIterable (itr) {
+    async function* metricsIterable(itr) {
       log.numBytesSent = 0
 
       for await (const chunk of itr) {
@@ -132,7 +132,7 @@ export class Saturn {
 
     try {
       const itr = metricsIterable(asAsyncIterable(res.body))
-      yield * extractVerifiedContent(cidPath, itr)
+      yield* extractVerifiedContent(cidPath, itr)
     } catch (err) {
       log.error = err.message
       controller.abort()
@@ -152,7 +152,7 @@ export class Saturn {
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<Uint8Array>}
    */
-  async fetchContentBuffer (cidPath, opts = {}) {
+  async fetchContentBuffer(cidPath, opts = {}) {
     return await asyncIteratorToBuffer(this.fetchContent(cidPath, opts))
   }
 
@@ -162,7 +162,7 @@ export class Saturn {
    * @param {object} [opts={}]
    * @returns {URL}
    */
-  createRequestURL (cidPath, opts) {
+  createRequestURL(cidPath, opts) {
     let origin = opts.cdnURL
     if (!origin.startsWith('http')) {
       origin = `https://${origin}`
@@ -185,7 +185,7 @@ export class Saturn {
    *
    * @param {object} log
    */
-  _finalizeLog (log) {
+  _finalizeLog(log) {
     log.requestDurationSec = (new Date() - log.startTime) / 1000
     this.reportLogs(log)
   }
@@ -194,7 +194,7 @@ export class Saturn {
    *
    * @param {object} log
    */
-  reportLogs (log) {
+  reportLogs(log) {
     if (!this.reportingLogs) return
 
     this.logs.push(log)
@@ -202,7 +202,7 @@ export class Saturn {
     this.reportLogsTimeout = setTimeout(this._reportLogs.bind(this), 3_000)
   }
 
-  async _reportLogs () {
+  async _reportLogs() {
     if (!this.logs.length) {
       return
     }
@@ -227,7 +227,7 @@ export class Saturn {
    *
    * @param {Array<object>} logs
    */
-  _matchLogsWithPerformanceMetrics (logs) {
+  _matchLogsWithPerformanceMetrics(logs) {
     return logs
       .map(log => ({ ...log, ...this._getPerformanceMetricsForLog(log) }))
       .filter(log => !log.isFromBrowserCache)
@@ -242,7 +242,7 @@ export class Saturn {
    * @param {object} log
    * @returns {object}
    */
-  _getPerformanceMetricsForLog (log) {
+  _getPerformanceMetricsForLog(log) {
     const metrics = {}
 
     // URL is the best differentiator available, though there can be multiple entries per URL.
@@ -276,12 +276,12 @@ export class Saturn {
     return metrics
   }
 
-  _monitorPerformanceBuffer () {
+  _monitorPerformanceBuffer() {
     // Using static method prevents multiple unnecessary listeners.
     performance.addEventListener('resourcetimingbufferfull', Saturn._setResourceBufferSize)
   }
 
-  static _setResourceBufferSize () {
+  static _setResourceBufferSize() {
     const increment = 250
     const maxSize = 1000
     const size = performance.getEntriesByType('resource').length
@@ -290,7 +290,7 @@ export class Saturn {
     performance.setResourceTimingBufferSize(newSize)
   }
 
-  _clearPerformanceBuffer () {
+  _clearPerformanceBuffer() {
     if (this.hasPerformanceAPI) {
       performance.clearResourceTimings()
     }
