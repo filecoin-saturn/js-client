@@ -12,6 +12,7 @@ import { isBrowserContext } from './utils/runtime.js'
 
 export class Saturn {
   static nodesListKey = 'saturn-nodes'
+  static defaultRaceCount = 3
   /**
    *
    * @param {object} [opts={}]
@@ -99,7 +100,7 @@ export class Saturn {
       }
     }
 
-    const abortSlowResponses = async (res, controllers) => {
+    const abortRemainingFetches = async (res, controllers) => {
       return controllers.forEach((controller) => {
         if (res.controller !== controller) {
           controller.abort('Request race unsuccessful')
@@ -113,16 +114,14 @@ export class Saturn {
       startTime: new Date()
     }
 
-    let res
-    let controller
+    let res, url, controller
     try {
-      const promiseRes = await fetchPromises
-      res = promiseRes.res
-      controller = res.controller
-      abortSlowResponses(res, controllers)
+      ({ res, url, controller } = await fetchPromises)
+
+      abortRemainingFetches(res, controllers)
 
       const { headers } = res
-      log.url = promiseRes.url
+      log.url = url
       log.ttfbMs = new Date() - log.startTime
       log.httpStatusCode = res.status
       log.cacheHit = headers.get('saturn-cache-status') === 'HIT'
@@ -263,11 +262,13 @@ export class Saturn {
     }
 
     let fallbackCount = 0
-    for (const origin of this.nodes) {
+    const nodes = this.nodes
+    for (let i = 0; i < nodes.length; i++) {
       if (fallbackCount > this.opts.fallbackLimit) {
         return
       }
-      opts.url = origin.url
+      const origins = nodes.slice(i, i + Saturn.defaultRaceCount)
+      opts.origins = origins
       try {
         yield * fetchContent()
         return
@@ -285,14 +286,21 @@ export class Saturn {
   /**
    *
    * @param {string} cidPath
+   * @param {boolean} race
    * @param {object} [opts={}]
    * @param {('car'|'raw')} [opts.format]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<AsyncIterable<Uint8Array>>}
    */
-  async * fetchContent (cidPath, opts = {}) {
-    const { res, controller, log } = await this.fetchCID(cidPath, opts)
+  async * fetchContent (cidPath, race = false, opts = {}) {
+    let res, controller, log
+
+    if (race) {
+      ({ res, controller, log } = await this.fetchCIDWithRace(cidPath, opts))
+    } else {
+      ({ res, controller, log } = await this.fetchCID(cidPath, opts))
+    }
 
     async function * metricsIterable (itr) {
       log.numBytesSent = 0
@@ -336,7 +344,7 @@ export class Saturn {
    * @returns {URL}
    */
   createRequestURL (cidPath, opts) {
-    let origin = opts.url || opts.cdnURL
+    let origin = opts.url || opts.origins[0] || opts.cdnURL
     origin = addHttpPrefix(origin)
     const url = new URL(`${origin}/ipfs/${cidPath}`)
 
