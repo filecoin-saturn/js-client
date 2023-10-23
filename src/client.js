@@ -60,6 +60,103 @@ export class Saturn {
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<object>}
    */
+  async fetchCIDWithRace (cidPath, opts = {}) {
+    const [cid] = (cidPath ?? '').split('/')
+    CID.parse(cid)
+
+    const jwt = await getJWT(this.opts, this.storage)
+
+    const options = Object.assign({}, this.opts, { format: 'car', jwt }, opts)
+
+    if (!isBrowserContext) {
+      options.headers = {
+        ...(options.headers || {}),
+        Authorization: 'Bearer ' + options.jwt
+      }
+    }
+
+    const origins = options.origins
+    const controllers = []
+
+    const createFetchPromise = async (origin) => {
+      options.url = origin
+      const url = this.createRequestURL(cidPath, options)
+
+      const controller = new AbortController()
+      controllers.push(controller)
+      const connectTimeout = setTimeout(() => {
+        controller.abort()
+      }, options.connectTimeout)
+
+      try {
+        res = await fetch(parseUrl(url), { signal: controller.signal, ...options })
+        clearTimeout(connectTimeout)
+        return { res, url, controller }
+      } catch (err) {
+        throw new Error(
+          `Non OK response received: ${res.status} ${res.statusText}`
+        )
+      }
+    }
+
+    const abortSlowResponses = async (res, controllers) => {
+      return controllers.forEach((controller) => {
+        if (res.controller !== controller) {
+          controller.abort('Request race unsuccessful')
+        }
+      })
+    }
+
+    const fetchPromises = Promise.any(origins.map((origin) => createFetchPromise(origin)))
+
+    const log = {
+      startTime: new Date()
+    }
+
+    let res
+    let controller
+    try {
+      const promiseRes = await fetchPromises
+      res = promiseRes.res
+      controller = res.controller
+      abortSlowResponses(res, controllers)
+
+      const { headers } = res
+      log.url = promiseRes.url
+      log.ttfbMs = new Date() - log.startTime
+      log.httpStatusCode = res.status
+      log.cacheHit = headers.get('saturn-cache-status') === 'HIT'
+      log.nodeId = headers.get('saturn-node-id')
+      log.requestId = headers.get('saturn-transfer-id')
+      log.httpProtocol = headers.get('quic-status')
+
+      if (!res.ok) {
+        throw new Error(
+            `Non OK response received: ${res.status} ${res.statusText}`
+        )
+      }
+    } catch (err) {
+      if (!res) {
+        log.error = err.message
+      }
+      // Report now if error, otherwise report after download is done.
+      this._finalizeLog(log)
+
+      throw err
+    }
+
+    return { res, controller, log }
+  }
+
+  /**
+   *
+   * @param {string} cidPath
+   * @param {object} [opts={}]
+   * @param {('car'|'raw')} [opts.format]
+   * @param {number} [opts.connectTimeout=5000]
+   * @param {number} [opts.downloadTimeout=0]
+   * @returns {Promise<object>}
+   */
   async fetchCID (cidPath, opts = {}) {
     const [cid] = (cidPath ?? '').split('/')
     CID.parse(cid)
