@@ -9,10 +9,12 @@ import { memoryStorage } from './storage/index.js'
 import { getJWT } from './utils/jwt.js'
 import { parseUrl, addHttpPrefix } from './utils/url.js'
 import { isBrowserContext } from './utils/runtime.js'
+import HashRing from 'hashring'
 
 export class Saturn {
   static nodesListKey = 'saturn-nodes'
   static defaultRaceCount = 3
+  static hashRingCacheSize = 10_000
   /**
    *
    * @param {object} [opts={}]
@@ -23,6 +25,7 @@ export class Saturn {
    * @param {number} [opts.downloadTimeout=0]
    * @param {string} [opts.orchURL]
    * @param {number} [opts.fallbackLimit]
+   * @param {number} [opts.hashRingSize]
    * @param {import('./storage/index.js').Storage} [opts.storage]
    */
   constructor (opts = {}) {
@@ -34,6 +37,7 @@ export class Saturn {
       authURL: 'https://fz3dyeyxmebszwhuiky7vggmsu0rlkoy.lambda-url.us-west-2.on.aws/',
       fallbackLimit: 5,
       connectTimeout: 5_000,
+      hashRingSize: 25,
       downloadTimeout: 0
     }, opts)
 
@@ -472,6 +476,15 @@ export class Saturn {
     const newSize = Math.min(size + increment, maxSize)
 
     performance.setResourceTimingBufferSize(newSize)
+  }
+
+  _createNodeHashRing (nodes) {
+    const servers = nodes.slice(this.opts.hashRingSize).reduce((accumulator, node) => {
+      accumulator[node.url] = { weight: node.weight }
+      return accumulator
+    }, {})
+
+    return new HashRing(servers, 'md5', { 'max cache size': Saturn.hashRingCacheSize })
   }
 
   _clearPerformanceBuffer () {
