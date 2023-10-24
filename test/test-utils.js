@@ -10,6 +10,7 @@ import fs from 'fs'
 import { addHttpPrefix } from '../src/utils/url.js'
 
 const HTTP_STATUS_OK = 200
+const HTTP_STATUS_TIMEOUT = 504
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 process.env.TESTING = 'true'
@@ -137,7 +138,7 @@ export function mockNodesHandlers (count, originDomain, failures = 0) {
     return rest.get(url, (req, res, ctx) => {
       if (idx < failures) {
         return res(
-          ctx.status(504)
+          ctx.status(HTTP_STATUS_TIMEOUT)
         )
       }
       const filepath = getFixturePath('hello.car')
