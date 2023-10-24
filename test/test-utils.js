@@ -123,14 +123,23 @@ export function mockJWT (authURL) {
  *
  * @param {number} count - amount of nodes to mock
  * @param {string} originDomain - saturn origin domain.
+ * @param {number} failures
  * @returns {RestHandler<any>[]}
  */
-export function mockNodesHandlers (count, originDomain) {
+export function mockNodesHandlers (count, originDomain, failures = 0) {
+  if (failures > count) {
+    throw Error('failures number cannot exceed node count')
+  }
   const nodes = generateNodes(count, originDomain)
 
-  const handlers = nodes.map((node) => {
+  const handlers = nodes.map((node, idx) => {
     const url = `${node.url}/ipfs/:cid`
     return rest.get(url, (req, res, ctx) => {
+      if (idx < failures) {
+        return res(
+          ctx.status(504)
+        )
+      }
       const filepath = getFixturePath('hello.car')
       const fileContents = fs.readFileSync(filepath)
       return res(

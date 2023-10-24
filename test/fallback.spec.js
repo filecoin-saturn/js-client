@@ -128,7 +128,74 @@ describe('Client Fallback', () => {
 
     const saturn = new Saturn({ storage: mockStorage, clientKey: CLIENT_KEY, clientId: 'test' })
 
-    const cid = saturn.fetchContentWithFallback('bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4', { url: 'node1.saturn.ms' })
+    const cid = saturn.fetchContentWithFallback('bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4')
+
+    const buffer = await concatChunks(cid)
+    const actualContent = String.fromCharCode(...buffer)
+    const expectedContent = 'hello world\n'
+
+    assert.strictEqual(actualContent, expectedContent)
+    server.close()
+    mock.reset()
+  })
+
+  test('Content Fallback fetches a cid properly with race', async (t) => {
+    const handlers = [
+      mockOrchHandler(5, TEST_DEFAULT_ORCH, 'saturn.ms'),
+      mockJWT(TEST_AUTH),
+      mockSaturnOriginHandler(TEST_ORIGIN_DOMAIN, 0, true),
+      ...mockNodesHandlers(5, TEST_ORIGIN_DOMAIN)
+    ]
+    const server = getMockServer(handlers)
+    server.listen(MSW_SERVER_OPTS)
+
+    const expectedNodes = generateNodes(3, TEST_ORIGIN_DOMAIN)
+
+    // Mocking storage object
+    const mockStorage = {
+      get: async (key) => expectedNodes,
+      set: async (key, value) => { return null }
+    }
+    t.mock.method(mockStorage, 'get')
+    t.mock.method(mockStorage, 'set')
+
+    const saturn = new Saturn({ storage: mockStorage, clientKey: CLIENT_KEY, clientId: 'test' })
+    // const origins =
+
+    const cid = saturn.fetchContentWithFallback('bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4', { raceNodes: true })
+
+    const buffer = await concatChunks(cid)
+    const actualContent = String.fromCharCode(...buffer)
+    const expectedContent = 'hello world\n'
+
+    assert.strictEqual(actualContent, expectedContent)
+    server.close()
+    mock.reset()
+  })
+
+  test('Content Fallback with race fetches from consecutive nodes on failure', async (t) => {
+    const handlers = [
+      mockOrchHandler(5, TEST_DEFAULT_ORCH, 'saturn.ms'),
+      mockJWT(TEST_AUTH),
+      mockSaturnOriginHandler(TEST_ORIGIN_DOMAIN, 0, true),
+      ...mockNodesHandlers(5, TEST_ORIGIN_DOMAIN, 2)
+    ]
+    const server = getMockServer(handlers)
+    server.listen(MSW_SERVER_OPTS)
+
+    const expectedNodes = generateNodes(5, TEST_ORIGIN_DOMAIN)
+
+    // Mocking storage object
+    const mockStorage = {
+      get: async (key) => expectedNodes,
+      set: async (key, value) => { return null }
+    }
+    t.mock.method(mockStorage, 'get')
+    t.mock.method(mockStorage, 'set')
+
+    const saturn = new Saturn({ storage: mockStorage, clientKey: CLIENT_KEY, clientId: 'test' })
+
+    const cid = saturn.fetchContentWithFallback('bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4', { raceNodes: true })
 
     const buffer = await concatChunks(cid)
     const actualContent = String.fromCharCode(...buffer)

@@ -164,7 +164,6 @@ export class Saturn {
 
     const options = Object.assign({}, this.opts, { format: 'car', jwt }, opts)
     const url = this.createRequestURL(cidPath, options)
-
     const log = {
       url,
       startTime: new Date()
@@ -218,6 +217,7 @@ export class Saturn {
    * @param {string} cidPath
    * @param {object} [opts={}]
    * @param {('car'|'raw')} [opts.format]
+   * @param {boolean} [opts.raceNodes]
    * @param {string} [opts.url]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
@@ -267,8 +267,13 @@ export class Saturn {
       if (fallbackCount > this.opts.fallbackLimit) {
         return
       }
-      const origins = nodes.slice(i, i + Saturn.defaultRaceCount)
-      opts.origins = origins
+      if (opts.raceNodes) {
+        const origins = nodes.slice(i, i + Saturn.defaultRaceCount).map((node) => node.url)
+        opts.origins = origins
+      } else {
+        opts.url = nodes[i].url
+      }
+
       try {
         yield * fetchContent()
         return
@@ -286,17 +291,17 @@ export class Saturn {
   /**
    *
    * @param {string} cidPath
-   * @param {boolean} race
    * @param {object} [opts={}]
    * @param {('car'|'raw')} [opts.format]
+   * @param {boolean} [opts.raceNodes]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<AsyncIterable<Uint8Array>>}
    */
-  async * fetchContent (cidPath, race = false, opts = {}) {
+  async * fetchContent (cidPath, opts = {}) {
     let res, controller, log
 
-    if (race) {
+    if (opts.raceNodes) {
       ({ res, controller, log } = await this.fetchCIDWithRace(cidPath, opts))
     } else {
       ({ res, controller, log } = await this.fetchCID(cidPath, opts))
@@ -329,6 +334,7 @@ export class Saturn {
    * @param {string} cidPath
    * @param {object} [opts={}]
    * @param {('car'|'raw')} [opts.format]
+   * @param {boolean} [opts.raceNodes]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<Uint8Array>}
@@ -344,7 +350,7 @@ export class Saturn {
    * @returns {URL}
    */
   createRequestURL (cidPath, opts) {
-    let origin = opts.url || opts.origins[0] || opts.cdnURL
+    let origin = opts.url || (opts.origins && opts.origins[0]) || opts.cdnURL
     origin = addHttpPrefix(origin)
     const url = new URL(`${origin}/ipfs/${cidPath}`)
 
