@@ -84,8 +84,8 @@ export class Saturn {
     const controllers = []
 
     const createFetchPromise = async (origin) => {
-      options.url = origin
-      const url = this.createRequestURL(cidPath, options)
+      const fetchOptions = { ...options, url: origin }
+      const url = this.createRequestURL(cidPath, fetchOptions)
 
       const controller = new AbortController()
       controllers.push(controller)
@@ -104,9 +104,9 @@ export class Saturn {
       }
     }
 
-    const abortRemainingFetches = async (res, controllers) => {
+    const abortRemainingFetches = async (successController, controllers) => {
       return controllers.forEach((controller) => {
-        if (res.controller !== controller) {
+        if (successController !== controller) {
           controller.abort('Request race unsuccessful')
         }
       })
@@ -114,7 +114,7 @@ export class Saturn {
 
     const fetchPromises = Promise.any(origins.map((origin) => createFetchPromise(origin)))
 
-    const log = {
+    let log = {
       startTime: new Date()
     }
 
@@ -122,16 +122,8 @@ export class Saturn {
     try {
       ({ res, url, controller } = await fetchPromises)
 
-      abortRemainingFetches(res, controllers)
-
-      const { headers } = res
-      log.url = url
-      log.ttfbMs = new Date() - log.startTime
-      log.httpStatusCode = res.status
-      log.cacheHit = headers.get('saturn-cache-status') === 'HIT'
-      log.nodeId = headers.get('saturn-node-id')
-      log.requestId = headers.get('saturn-transfer-id')
-      log.httpProtocol = headers.get('quic-status')
+      abortRemainingFetches(controller, controllers)
+      log = Object.assign(log, this._generateLog(res, log), { url })
 
       if (!res.ok) {
         throw new Error(
@@ -168,7 +160,7 @@ export class Saturn {
 
     const options = Object.assign({}, this.opts, { format: 'car', jwt }, opts)
     const url = this.createRequestURL(cidPath, options)
-    const log = {
+    let log = {
       url,
       startTime: new Date()
     }
@@ -190,13 +182,7 @@ export class Saturn {
 
       clearTimeout(connectTimeout)
 
-      const { headers } = res
-      log.ttfbMs = new Date() - log.startTime
-      log.httpStatusCode = res.status
-      log.cacheHit = headers.get('saturn-cache-status') === 'HIT'
-      log.nodeId = headers.get('saturn-node-id')
-      log.requestId = headers.get('saturn-transfer-id')
-      log.httpProtocol = headers.get('quic-status')
+      log = Object.assign(log, this._generateLog(res, log))
 
       if (!res.ok) {
         throw new Error(
@@ -214,6 +200,26 @@ export class Saturn {
     }
 
     return { res, controller, log }
+  }
+
+  /**
+   * @param {Response} res
+   * @param {object} log
+   * @returns {object}
+   */
+  _generateLog (res, log) {
+    const { headers } = res
+    log.httpStatusCode = res.status
+    log.cacheHit = headers.get('saturn-cache-status') === 'HIT'
+    log.nodeId = headers.get('saturn-node-id')
+    log.requestId = headers.get('saturn-transfer-id')
+    log.httpProtocol = headers.get('quic-status')
+
+    if (res.ok) {
+      log.ttfbMs = new Date() - log.startTime
+    }
+
+    return log
   }
 
   /**
