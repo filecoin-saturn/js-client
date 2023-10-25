@@ -379,7 +379,7 @@ export class Saturn {
     const distanceImportanceFactor = 0.8
     const weightImportanceFactor = 1 - distanceImportanceFactor
 
-    nodes.slice().sort((a, b) => {
+    return nodes.slice().sort((a, b) => {
       const normalizedDistanceA = a.distance / maxDistance
       const normalizedDistanceB = b.distance / maxDistance
       const normalizedWeightA = a.weight / MAX_NODE_WEIGHT
@@ -392,7 +392,6 @@ export class Saturn {
 
       return metricA - metricB
     })
-    return nodes
   }
 
   async _loadNodes (opts) {
