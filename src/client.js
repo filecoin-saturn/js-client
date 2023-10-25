@@ -139,21 +139,6 @@ export class Saturn {
     return { res, controller, log }
   }
 
-  _generateLog (res, log) {
-    const { headers } = res
-    log.httpStatusCode = res.status
-    log.cacheHit = headers.get('saturn-cache-status') === 'HIT'
-    log.nodeId = headers.get('saturn-node-id')
-    log.requestId = headers.get('saturn-transfer-id')
-    log.httpProtocol = headers.get('quic-status')
-
-    if (res.ok) {
-      log.ttfbMs = new Date() - log.startTime
-    }
-
-    return log
-  }
-
   /**
    *
    * @param {string} cidPath
@@ -211,6 +196,26 @@ export class Saturn {
     }
 
     return { res, controller, log }
+  }
+
+  /**
+   * @param {Response} res
+   * @param {object} log
+   * @returns {object}
+   */
+  _generateLog (res, log) {
+    const { headers } = res
+    log.httpStatusCode = res.status
+    log.cacheHit = headers.get('saturn-cache-status') === 'HIT'
+    log.nodeId = headers.get('saturn-node-id')
+    log.requestId = headers.get('saturn-transfer-id')
+    log.httpProtocol = headers.get('quic-status')
+
+    if (res.ok) {
+      log.ttfbMs = new Date() - log.startTime
+    }
+
+    return log
   }
 
   /**
