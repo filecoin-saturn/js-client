@@ -47,6 +47,7 @@ export class Saturn {
 
     this.logs = []
     this.nodes = []
+    this.hashring
     this.reportingLogs = process?.env?.NODE_ENV !== 'development'
     this.hasPerformanceAPI = isBrowserContext && self?.performance
     if (this.reportingLogs && this.hasPerformanceAPI) {
@@ -271,17 +272,21 @@ export class Saturn {
       }
     }
 
+    let nodes = this.nodes.slice().map((node) => node.url)
+    if (this.hashring) {
+      nodes = this.hashring.range(cidPath, this.opts.fallbackLimit + 1)
+    }
+
     let fallbackCount = 0
-    const nodes = this.nodes
     for (let i = 0; i < nodes.length; i++) {
       if (fallbackCount > this.opts.fallbackLimit) {
         return
       }
       if (opts.raceNodes) {
-        const origins = nodes.slice(i, i + Saturn.defaultRaceCount).map((node) => node.url)
+        const origins = nodes.slice(i, i + Saturn.defaultRaceCount)
         opts.origins = origins
       } else {
-        opts.url = nodes[i].url
+        opts.url = nodes[i]
       }
 
       try {
@@ -484,13 +489,15 @@ export class Saturn {
     performance.setResourceTimingBufferSize(newSize)
   }
 
-  _createNodeHashRing (nodes) {
-    const servers = nodes.slice(this.opts.hashRingSize).reduce((accumulator, node) => {
+  _setNodesHashRing (nodes) {
+    const servers = nodes.slice(0, this.opts.hashRingSize).reduce((accumulator, node) => {
       accumulator[node.url] = { weight: node.weight }
       return accumulator
     }, {})
 
-    return new HashRing(servers, 'md5', { 'max cache size': Saturn.hashRingCacheSize })
+    const hashring = new HashRing(servers, 'md5', { 'max cache size': Saturn.hashRingCacheSize })
+    this.hashring = hashring
+    return hashring
   }
 
   _clearPerformanceBuffer () {
@@ -534,10 +541,12 @@ export class Saturn {
     // if storage returns first, update based on cached storage.
     if (nodes === await cacheNodesListPromise) {
       this.nodes = nodes
+      nodes && this._setNodesHashRing(nodes)
     }
     // we always want to update from the orchestrator regardless.
     nodes = await orchNodesListPromise
     this.nodes = nodes
     this.storage?.set(Saturn.nodesListKey, nodes)
+    this._setNodesHashRing(nodes)
   }
 }
