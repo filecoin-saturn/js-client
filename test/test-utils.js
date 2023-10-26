@@ -16,12 +16,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 process.env.TESTING = 'true'
 
 /**
- *
- * @typedef {object} Node
- * @property {string} ip
- * @property {number} weight
- * @property {number} distance
- * @property {string} url
+ * @typedef {import('../src/types.js').Node} Node
  */
 
 /**

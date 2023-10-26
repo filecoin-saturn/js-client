@@ -11,6 +11,9 @@ import { parseUrl, addHttpPrefix } from './utils/url.js'
 import { isBrowserContext } from './utils/runtime.js'
 
 const MAX_NODE_WEIGHT = 100
+/**
+ * @typedef {import('./types.js').Node} Node
+ */
 
 export class Saturn {
   static nodesListKey = 'saturn-nodes'
@@ -488,6 +491,12 @@ export class Saturn {
     }
   }
 
+  /**
+   * Sorts nodes based on normalized distance and weights. Distance is prioritized for sorting.
+   *
+   * @param {Node[]} nodes
+   * @returns {Node[]}
+   */
   _sortNodes (nodes) {
     // Determine the maximum distance for normalization
     const maxDistance = Math.max(...nodes.map(node => node.distance))
