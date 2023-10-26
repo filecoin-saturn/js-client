@@ -11,9 +11,13 @@ import { parseUrl, addHttpPrefix } from './utils/url.js'
 import { isBrowserContext } from './utils/runtime.js'
 
 const MAX_NODE_WEIGHT = 100
+/**
+ * @typedef {import('./types.js').Node} Node
+ */
 
 export class Saturn {
   static nodesListKey = 'saturn-nodes'
+  static defaultRaceCount = 3
   /**
    *
    * @param {object} [opts={}]
@@ -62,6 +66,93 @@ export class Saturn {
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<object>}
    */
+  async fetchCIDWithRace (cidPath, opts = {}) {
+    const [cid] = (cidPath ?? '').split('/')
+    CID.parse(cid)
+
+    const jwt = await getJWT(this.opts, this.storage)
+
+    const options = Object.assign({}, this.opts, { format: 'car', jwt }, opts)
+
+    if (!isBrowserContext) {
+      options.headers = {
+        ...(options.headers || {}),
+        Authorization: 'Bearer ' + options.jwt
+      }
+    }
+
+    const origins = options.origins
+    const controllers = []
+
+    const createFetchPromise = async (origin) => {
+      const fetchOptions = { ...options, url: origin }
+      const url = this.createRequestURL(cidPath, fetchOptions)
+
+      const controller = new AbortController()
+      controllers.push(controller)
+      const connectTimeout = setTimeout(() => {
+        controller.abort()
+      }, options.connectTimeout)
+
+      try {
+        res = await fetch(parseUrl(url), { signal: controller.signal, ...options })
+        clearTimeout(connectTimeout)
+        return { res, url, controller }
+      } catch (err) {
+        throw new Error(
+          `Non OK response received: ${res.status} ${res.statusText}`
+        )
+      }
+    }
+
+    const abortRemainingFetches = async (successController, controllers) => {
+      return controllers.forEach((controller) => {
+        if (successController !== controller) {
+          controller.abort('Request race unsuccessful')
+        }
+      })
+    }
+
+    const fetchPromises = Promise.any(origins.map((origin) => createFetchPromise(origin)))
+
+    let log = {
+      startTime: new Date()
+    }
+
+    let res, url, controller
+    try {
+      ({ res, url, controller } = await fetchPromises)
+
+      abortRemainingFetches(controller, controllers)
+      log = Object.assign(log, this._generateLog(res, log), { url })
+
+      if (!res.ok) {
+        throw new Error(
+            `Non OK response received: ${res.status} ${res.statusText}`
+        )
+      }
+    } catch (err) {
+      if (!res) {
+        log.error = err.message
+      }
+      // Report now if error, otherwise report after download is done.
+      this._finalizeLog(log)
+
+      throw err
+    }
+
+    return { res, controller, log }
+  }
+
+  /**
+   *
+   * @param {string} cidPath
+   * @param {object} [opts={}]
+   * @param {('car'|'raw')} [opts.format]
+   * @param {number} [opts.connectTimeout=5000]
+   * @param {number} [opts.downloadTimeout=0]
+   * @returns {Promise<object>}
+   */
   async fetchCID (cidPath, opts = {}) {
     const [cid] = (cidPath ?? '').split('/')
     CID.parse(cid)
@@ -70,8 +161,7 @@ export class Saturn {
 
     const options = Object.assign({}, this.opts, { format: 'car', jwt }, opts)
     const url = this.createRequestURL(cidPath, options)
-
-    const log = {
+    let log = {
       url,
       startTime: new Date()
     }
@@ -93,13 +183,7 @@ export class Saturn {
 
       clearTimeout(connectTimeout)
 
-      const { headers } = res
-      log.ttfbMs = new Date() - log.startTime
-      log.httpStatusCode = res.status
-      log.cacheHit = headers.get('saturn-cache-status') === 'HIT'
-      log.nodeId = headers.get('saturn-node-id')
-      log.requestId = headers.get('saturn-transfer-id')
-      log.httpProtocol = headers.get('quic-status')
+      log = Object.assign(log, this._generateLog(res, log))
 
       if (!res.ok) {
         throw new Error(
@@ -120,10 +204,31 @@ export class Saturn {
   }
 
   /**
+   * @param {Response} res
+   * @param {object} log
+   * @returns {object}
+   */
+  _generateLog (res, log) {
+    const { headers } = res
+    log.httpStatusCode = res.status
+    log.cacheHit = headers.get('saturn-cache-status') === 'HIT'
+    log.nodeId = headers.get('saturn-node-id')
+    log.requestId = headers.get('saturn-transfer-id')
+    log.httpProtocol = headers.get('quic-status')
+
+    if (res.ok) {
+      log.ttfbMs = new Date() - log.startTime
+    }
+
+    return log
+  }
+
+  /**
    *
    * @param {string} cidPath
    * @param {object} [opts={}]
    * @param {('car'|'raw')} [opts.format]
+   * @param {boolean} [opts.raceNodes]
    * @param {string} [opts.url]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
@@ -168,11 +273,18 @@ export class Saturn {
     }
 
     let fallbackCount = 0
-    for (const origin of this.nodes) {
+    const nodes = this.nodes
+    for (let i = 0; i < nodes.length; i++) {
       if (fallbackCount > this.opts.fallbackLimit) {
         return
       }
-      opts.url = origin.url
+      if (opts.raceNodes) {
+        const origins = nodes.slice(i, i + Saturn.defaultRaceCount).map((node) => node.url)
+        opts.origins = origins
+      } else {
+        opts.url = nodes[i].url
+      }
+
       try {
         yield * fetchContent()
         return
@@ -191,13 +303,20 @@ export class Saturn {
    *
    * @param {string} cidPath
    * @param {object} [opts={}]
-   * @param {('car'|'raw')} [opts.format]
+   * @param {('car'|'raw')} [opts.format]- -
+   * @param {boolean} [opts.raceNodes]- -
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<AsyncIterable<Uint8Array>>}
    */
   async * fetchContent (cidPath, opts = {}) {
-    const { res, controller, log } = await this.fetchCID(cidPath, opts)
+    let res, controller, log
+
+    if (opts.raceNodes) {
+      ({ res, controller, log } = await this.fetchCIDWithRace(cidPath, opts))
+    } else {
+      ({ res, controller, log } = await this.fetchCID(cidPath, opts))
+    }
 
     async function * metricsIterable (itr) {
       log.numBytesSent = 0
@@ -226,6 +345,7 @@ export class Saturn {
    * @param {string} cidPath
    * @param {object} [opts={}]
    * @param {('car'|'raw')} [opts.format]
+   * @param {boolean} [opts.raceNodes]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<Uint8Array>}
@@ -241,7 +361,7 @@ export class Saturn {
    * @returns {URL}
    */
   createRequestURL (cidPath, opts) {
-    let origin = opts.url || opts.cdnURL
+    let origin = opts.url || (opts.origins && opts.origins[0]) || opts.cdnURL
     origin = addHttpPrefix(origin)
     const url = new URL(`${origin}/ipfs/${cidPath}`)
 
@@ -371,6 +491,12 @@ export class Saturn {
     }
   }
 
+  /**
+   * Sorts nodes based on normalized distance and weights. Distance is prioritized for sorting.
+   *
+   * @param {Node[]} nodes
+   * @returns {Node[]}
+   */
   _sortNodes (nodes) {
     // Determine the maximum distance for normalization
     const maxDistance = Math.max(...nodes.map(node => node.distance))

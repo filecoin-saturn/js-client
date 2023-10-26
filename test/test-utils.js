@@ -10,17 +10,13 @@ import fs from 'fs'
 import { addHttpPrefix } from '../src/utils/url.js'
 
 const HTTP_STATUS_OK = 200
+const HTTP_STATUS_TIMEOUT = 504
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 process.env.TESTING = 'true'
 
 /**
- *
- * @typedef {object} Node
- * @property {string} ip
- * @property {number} weight
- * @property {number} distance
- * @property {string} url
+ * @typedef {import('../src/types.js').Node} Node
  */
 
 /**
@@ -123,14 +119,23 @@ export function mockJWT (authURL) {
  *
  * @param {number} count - amount of nodes to mock
  * @param {string} originDomain - saturn origin domain.
+ * @param {number} failures
  * @returns {RestHandler<any>[]}
  */
-export function mockNodesHandlers (count, originDomain) {
+export function mockNodesHandlers (count, originDomain, failures = 0) {
+  if (failures > count) {
+    throw Error('failures number cannot exceed node count')
+  }
   const nodes = generateNodes(count, originDomain)
 
-  const handlers = nodes.map((node) => {
+  const handlers = nodes.map((node, idx) => {
     const url = `${node.url}/ipfs/:cid`
     return rest.get(url, (req, res, ctx) => {
+      if (idx < failures) {
+        return res(
+          ctx.status(HTTP_STATUS_TIMEOUT)
+        )
+      }
       const filepath = getFixturePath('hello.car')
       const fileContents = fs.readFileSync(filepath)
       return res(
