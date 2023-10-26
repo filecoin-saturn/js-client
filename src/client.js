@@ -11,6 +11,11 @@ import { parseUrl, addHttpPrefix } from './utils/url.js'
 import { isBrowserContext } from './utils/runtime.js'
 import HashRing from 'hashring'
 
+const MAX_NODE_WEIGHT = 100
+/**
+ * @typedef {import('./types.js').Node} Node
+ */
+
 export class Saturn {
   static nodesListKey = 'saturn-nodes'
   static defaultRaceCount = 3
@@ -506,6 +511,35 @@ export class Saturn {
     }
   }
 
+  /**
+   * Sorts nodes based on normalized distance and weights. Distance is prioritized for sorting.
+   *
+   * @param {Node[]} nodes
+   * @returns {Node[]}
+   */
+  _sortNodes (nodes) {
+    // Determine the maximum distance for normalization
+    const maxDistance = Math.max(...nodes.map(node => node.distance))
+
+    // These weights determine how important each factor is in determining
+    const distanceImportanceFactor = 0.8
+    const weightImportanceFactor = 1 - distanceImportanceFactor
+
+    return nodes.slice().sort((a, b) => {
+      const normalizedDistanceA = a.distance / maxDistance
+      const normalizedDistanceB = b.distance / maxDistance
+      const normalizedWeightA = a.weight / MAX_NODE_WEIGHT
+      const normalizedWeightB = b.weight / MAX_NODE_WEIGHT
+
+      const metricA =
+        distanceImportanceFactor * normalizedDistanceA - weightImportanceFactor * normalizedWeightA
+      const metricB =
+        distanceImportanceFactor * normalizedDistanceB - weightImportanceFactor * normalizedWeightB
+
+      return metricA - metricB
+    })
+  }
+
   async _loadNodes (opts) {
     let origin = opts.orchURL
 
@@ -545,6 +579,7 @@ export class Saturn {
     }
     // we always want to update from the orchestrator regardless.
     nodes = await orchNodesListPromise
+    nodes = this._sortNodes(nodes)
     this.nodes = nodes
     this.storage?.set(Saturn.nodesListKey, nodes)
     this._setNodesHashRing(nodes)

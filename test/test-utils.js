@@ -16,12 +16,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 process.env.TESTING = 'true'
 
 /**
- *
- * @typedef {object} Node
- * @property {string} ip
- * @property {number} weight
- * @property {number} distance
- * @property {string} url
+ * @typedef {import('../src/types.js').Node} Node
  */
 
 /**
@@ -37,7 +32,7 @@ export function generateNodes (count, originDomain) {
     const nodeIp = `node${i}`
     const node = {
       ip: nodeIp,
-      weight: i,
+      weight: 50,
       distance: 100,
       url: `https://${nodeIp}.${originDomain}`
     }
