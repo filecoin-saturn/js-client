@@ -37,7 +37,7 @@ export function generateNodes (count, originDomain) {
     const nodeIp = `node${i}`
     const node = {
       ip: nodeIp,
-      weight: i,
+      weight: 50,
       distance: 100,
       url: `https://${nodeIp}.${originDomain}`
     }
