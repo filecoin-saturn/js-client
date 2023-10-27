@@ -85,7 +85,8 @@ export class Saturn {
 
     let origins = options.origins
     if (!origins || origins.length === 0) {
-      origins = [options.url] ?? [options.cdnURL]
+      const replacementUrl = options.url ?? options.cdnURL
+      origins = [replacementUrl]
     }
     const controllers = []
 
@@ -327,7 +328,6 @@ export class Saturn {
    * @returns {Promise<AsyncIterable<Uint8Array>>}
    */
   async * fetchContent (cidPath, opts = {}) {
-    console.log(opts)
     let res, controller, log
 
     if (opts.raceNodes) {
