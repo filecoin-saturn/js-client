@@ -317,8 +317,8 @@ export class Saturn {
    *
    * @param {string} cidPath
    * @param {object} [opts={}]
-   * @param {('car'|'raw')} [opts.format]- -
-   * @param {boolean} [opts.raceNodes]- -
+   * @param {('car'|'raw')} [opts.format]
+   * @param {boolean} [opts.raceNodes]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<AsyncIterable<Uint8Array>>}
