@@ -9,6 +9,7 @@ import { memoryStorage } from './storage/index.js'
 import { getJWT } from './utils/jwt.js'
 import { parseUrl, addHttpPrefix } from './utils/url.js'
 import { isBrowserContext } from './utils/runtime.js'
+import { isErrorUnavoidable } from './utils/errors.js'
 
 const MAX_NODE_WEIGHT = 100
 /**
@@ -28,6 +29,7 @@ export class Saturn {
    * @param {number} [opts.downloadTimeout=0]
    * @param {string} [opts.orchURL]
    * @param {number} [opts.fallbackLimit]
+   * @param {boolean} [opts.experimental]
    * @param {import('./storage/index.js').Storage} [opts.storage]
    */
   constructor (opts = {}) {
@@ -54,7 +56,7 @@ export class Saturn {
       this._monitorPerformanceBuffer()
     }
     this.storage = this.opts.storage || memoryStorage()
-    this.loadNodesPromise = this._loadNodes(this.opts)
+    this.loadNodesPromise = this.opts.experimental ? this._loadNodes(this.opts) : null
   }
 
   /**
@@ -81,7 +83,11 @@ export class Saturn {
       }
     }
 
-    const origins = options.origins
+    let origins = options.origins
+    if (!origins || origins.length === 0) {
+      const replacementUrl = options.url ?? options.cdnURL
+      origins = [replacementUrl]
+    }
     const controllers = []
 
     const createFetchPromise = async (origin) => {
@@ -125,11 +131,12 @@ export class Saturn {
 
       abortRemainingFetches(controller, controllers)
       log = Object.assign(log, this._generateLog(res, log), { url })
-
       if (!res.ok) {
-        throw new Error(
-            `Non OK response received: ${res.status} ${res.statusText}`
+        const error = new Error(
+          `Non OK response received: ${res.status} ${res.statusText}`
         )
+        error.res = res
+        throw error
       }
     } catch (err) {
       if (!res) {
@@ -184,11 +191,12 @@ export class Saturn {
       clearTimeout(connectTimeout)
 
       log = Object.assign(log, this._generateLog(res, log))
-
       if (!res.ok) {
-        throw new Error(
+        const error = new Error(
           `Non OK response received: ${res.status} ${res.statusText}`
         )
+        error.res = res
+        throw error
       }
     } catch (err) {
       if (!res) {
@@ -240,6 +248,10 @@ export class Saturn {
     // this is temporary until range requests are supported.
     let byteCountCheckpoint = 0
 
+    const throwError = () => {
+      throw new Error(`All attempts to fetch content have failed. Last error: ${lastError.message}`)
+    }
+
     const fetchContent = async function * () {
       let byteCount = 0
       const byteChunks = await this.fetchContent(cidPath, opts)
@@ -268,6 +280,9 @@ export class Saturn {
         return
       } catch (err) {
         lastError = err
+        if (err.res?.status === 410 || isErrorUnavoidable(err)) {
+          throwError()
+        }
         await this.loadNodesPromise
       }
     }
@@ -290,12 +305,15 @@ export class Saturn {
         return
       } catch (err) {
         lastError = err
+        if (err.res?.status === 410 || isErrorUnavoidable(err)) {
+          break
+        }
       }
       fallbackCount += 1
     }
 
     if (lastError) {
-      throw new Error(`All attempts to fetch content have failed. Last error: ${lastError.message}`)
+      throwError()
     }
   }
 
@@ -303,8 +321,8 @@ export class Saturn {
    *
    * @param {string} cidPath
    * @param {object} [opts={}]
-   * @param {('car'|'raw')} [opts.format]- -
-   * @param {boolean} [opts.raceNodes]- -
+   * @param {('car'|'raw')} [opts.format]
+   * @param {boolean} [opts.raceNodes]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<AsyncIterable<Uint8Array>>}
@@ -391,8 +409,8 @@ export class Saturn {
    * @param {object} log
    */
   reportLogs (log) {
-    if (!this.reportingLogs) return
     this.logs.push(log)
+    if (!this.reportingLogs) return
     this.reportLogsTimeout && clearTimeout(this.reportLogsTimeout)
     this.reportLogsTimeout = setTimeout(this._reportLogs.bind(this), 3_000)
   }
@@ -560,6 +578,6 @@ export class Saturn {
     nodes = await orchNodesListPromise
     nodes = this._sortNodes(nodes)
     this.nodes = nodes
-    this.storage?.set(Saturn.nodesListKey, nodes)
+    this.storage.set(Saturn.nodesListKey, nodes)
   }
 }
