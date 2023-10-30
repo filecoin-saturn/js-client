@@ -82,7 +82,7 @@ describe('Client Fallback', () => {
 
   test('Storage is loaded first when the orch is slower', async (t) => {
     const handlers = [
-      mockOrchHandler(2, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN, 1000)
+      mockOrchHandler(2, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN, 500)
     ]
     const server = getMockServer(handlers)
     server.listen(MSW_SERVER_OPTS)
