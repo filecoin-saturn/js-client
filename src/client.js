@@ -106,9 +106,8 @@ export class Saturn {
         clearTimeout(connectTimeout)
         return { res, url, node, controller }
       } catch (err) {
-        const error = err
-        error.node = node
-        throw new Error(error)
+        err.node = node
+        throw err
       }
     }
 
