@@ -302,8 +302,7 @@ export class Saturn {
         return
       }
       if (opts.raceNodes) {
-        const origins = nodes.slice(i, i + Saturn.defaultRaceCount)
-        opts.nodes = origins
+        opts.nodes = nodes.slice(i, i + Saturn.defaultRaceCount)
       } else {
         opts.node = nodes[i]
       }
