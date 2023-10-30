@@ -93,7 +93,6 @@ export class Saturn {
     const createFetchPromise = async (origin) => {
       const fetchOptions = { ...options, url: origin }
       const url = this.createRequestURL(cidPath, fetchOptions)
-
       const controller = new AbortController()
       controllers.push(controller)
       const connectTimeout = setTimeout(() => {
@@ -105,9 +104,7 @@ export class Saturn {
         clearTimeout(connectTimeout)
         return { res, url, controller }
       } catch (err) {
-        throw new Error(
-          `Non OK response received: ${res.status} ${res.statusText}`
-        )
+        throw new Error(err)
       }
     }
 

@@ -52,6 +52,7 @@ export function generateNodes (count, originDomain) {
  */
 export function mockSaturnOriginHandler (cdnURL, delay = 0, error = false) {
   cdnURL = addHttpPrefix(cdnURL)
+  cdnURL = `${cdnURL}/ipfs/:cid`
   return rest.get(cdnURL, (req, res, ctx) => {
     if (error) {
       throw Error('Simulated Error')
