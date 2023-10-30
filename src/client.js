@@ -87,8 +87,8 @@ export class Saturn {
 
     let nodes = options.nodes
     if (!nodes || nodes.length === 0) {
-      const replacementUrl = options.node ?? { url: this.opts.cdnURL }
-      nodes = [replacementUrl]
+      const replacementNode = options.node ?? { url: this.opts.cdnURL }
+      nodes = [replacementNode]
     }
     const controllers = []
 
