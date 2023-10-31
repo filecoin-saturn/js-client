@@ -5,13 +5,20 @@ import { describe, mock, test } from 'node:test'
 import { Saturn } from '#src/index.js'
 import { concatChunks, generateNodes, getMockServer, HTTP_STATUS_GONE, mockJWT, mockNodesHandlers, mockOrchHandler, mockSaturnOriginHandler, MSW_SERVER_OPTS } from './test-utils.js'
 
-const TEST_DEFAULT_ORCH = 'https://orchestrator.strn.pl/nodes'
+const TEST_DEFAULT_ORCH = 'https://orchestrator.strn.pl.test/nodes'
 const TEST_NODES_LIST_KEY = 'saturn-nodes'
-const TEST_AUTH = 'https://fz3dyeyxmebszwhuiky7vggmsu0rlkoy.lambda-url.us-west-2.on.aws/'
-const TEST_ORIGIN_DOMAIN = 'saturn.ms'
+const TEST_AUTH = 'https://auth.test/'
+const TEST_ORIGIN_DOMAIN = 'l1s.saturn.test'
 const CLIENT_KEY = 'key'
 
-const experimental = true
+const options = {
+  cdnURL: TEST_ORIGIN_DOMAIN,
+  orchURL: TEST_DEFAULT_ORCH,
+  authURL: TEST_AUTH,
+  experimental: true,
+  clientKey: CLIENT_KEY,
+  clientId: 'test'
+}
 
 describe('Client Fallback', () => {
   test('Nodes are loaded from the orchestrator if no storage is passed', async (t) => {
@@ -24,7 +31,7 @@ describe('Client Fallback', () => {
     const expectedNodes = generateNodes(2, TEST_ORIGIN_DOMAIN)
 
     // No Storage is injected
-    const saturn = new Saturn({ clientKey: CLIENT_KEY, experimental })
+    const saturn = new Saturn({ ...options })
     const mockOpts = { orchURL: TEST_DEFAULT_ORCH }
 
     await saturn._loadNodes(mockOpts)
@@ -37,7 +44,7 @@ describe('Client Fallback', () => {
 
   test('Storage is invoked correctly when supplied', async (t) => {
     const handlers = [
-      mockOrchHandler(2, TEST_DEFAULT_ORCH, 'saturn.ms')
+      mockOrchHandler(2, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN)
     ]
     const server = getMockServer(handlers)
     server.listen(MSW_SERVER_OPTS)
@@ -53,7 +60,7 @@ describe('Client Fallback', () => {
     t.mock.method(mockStorage, 'get')
     t.mock.method(mockStorage, 'set')
 
-    const saturn = new Saturn({ storage: mockStorage, clientKey: CLIENT_KEY, experimental })
+    const saturn = new Saturn({ storage: mockStorage, ...options })
 
     // Mocking options
     const mockOpts = { orchURL: TEST_DEFAULT_ORCH }
@@ -75,7 +82,7 @@ describe('Client Fallback', () => {
 
   test('Storage is loaded first when the orch is slower', async (t) => {
     const handlers = [
-      mockOrchHandler(2, TEST_DEFAULT_ORCH, 'saturn.ms', 1000)
+      mockOrchHandler(2, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN, 500)
     ]
     const server = getMockServer(handlers)
     server.listen(MSW_SERVER_OPTS)
@@ -90,7 +97,7 @@ describe('Client Fallback', () => {
     t.mock.method(mockStorage, 'get')
     t.mock.method(mockStorage, 'set')
 
-    const saturn = new Saturn({ storage: mockStorage, clientKey: CLIENT_KEY, experimental })
+    const saturn = new Saturn({ storage: mockStorage, ...options })
 
     // Mocking options
     const mockOpts = { orchURL: TEST_DEFAULT_ORCH }
@@ -111,7 +118,7 @@ describe('Client Fallback', () => {
 
   test('Content Fallback fetches a cid properly', async (t) => {
     const handlers = [
-      mockOrchHandler(2, TEST_DEFAULT_ORCH, 'saturn.ms'),
+      mockOrchHandler(2, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN),
       mockJWT(TEST_AUTH),
       mockSaturnOriginHandler(TEST_ORIGIN_DOMAIN, 0, true),
       ...mockNodesHandlers(2, TEST_ORIGIN_DOMAIN)
@@ -129,7 +136,7 @@ describe('Client Fallback', () => {
     t.mock.method(mockStorage, 'get')
     t.mock.method(mockStorage, 'set')
 
-    const saturn = new Saturn({ storage: mockStorage, clientKey: CLIENT_KEY, clientId: 'test', experimental })
+    const saturn = new Saturn({ storage: mockStorage, ...options })
 
     const cid = saturn.fetchContentWithFallback('bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4')
 
@@ -144,7 +151,7 @@ describe('Client Fallback', () => {
 
   test('Content Fallback fetches a cid properly with race', async (t) => {
     const handlers = [
-      mockOrchHandler(5, TEST_DEFAULT_ORCH, 'saturn.ms'),
+      mockOrchHandler(5, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN),
       mockJWT(TEST_AUTH),
       mockSaturnOriginHandler(TEST_ORIGIN_DOMAIN, 0, true),
       ...mockNodesHandlers(5, TEST_ORIGIN_DOMAIN)
@@ -162,8 +169,7 @@ describe('Client Fallback', () => {
     t.mock.method(mockStorage, 'get')
     t.mock.method(mockStorage, 'set')
 
-    const saturn = new Saturn({ storage: mockStorage, clientKey: CLIENT_KEY, clientId: 'test', experimental })
-    // const origins =
+    const saturn = new Saturn({ ...options })
 
     const cid = saturn.fetchContentWithFallback('bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4', { raceNodes: true })
 
@@ -178,7 +184,7 @@ describe('Client Fallback', () => {
 
   test('Content Fallback with race fetches from consecutive nodes on failure', async (t) => {
     const handlers = [
-      mockOrchHandler(5, TEST_DEFAULT_ORCH, 'saturn.ms'),
+      mockOrchHandler(5, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN),
       mockJWT(TEST_AUTH),
       mockSaturnOriginHandler(TEST_ORIGIN_DOMAIN, 0, true),
       ...mockNodesHandlers(5, TEST_ORIGIN_DOMAIN, 2)
@@ -196,7 +202,7 @@ describe('Client Fallback', () => {
     t.mock.method(mockStorage, 'get')
     t.mock.method(mockStorage, 'set')
 
-    const saturn = new Saturn({ storage: mockStorage, clientKey: CLIENT_KEY, clientId: 'test', experimental })
+    const saturn = new Saturn({ storage: mockStorage, ...options })
 
     const cid = saturn.fetchContentWithFallback('bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4', { raceNodes: true })
 
@@ -211,14 +217,14 @@ describe('Client Fallback', () => {
 
   test('should fetch content from the first node successfully', async () => {
     const handlers = [
-      mockOrchHandler(2, TEST_DEFAULT_ORCH, 'saturn.ms'),
+      mockOrchHandler(2, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN),
       mockJWT(TEST_AUTH),
       ...mockNodesHandlers(2, TEST_ORIGIN_DOMAIN)
     ]
 
     const server = getMockServer(handlers)
     server.listen(MSW_SERVER_OPTS)
-    const saturn = new Saturn({ clientKey: CLIENT_KEY, clientId: 'test', experimental })
+    const saturn = new Saturn({ ...options })
 
     const fetchContentMock = mock.fn(async function * (cidPath, opts) {
       yield Buffer.from('chunk1')
@@ -239,14 +245,14 @@ describe('Client Fallback', () => {
   test('should try all nodes and fail if all nodes fail', async () => {
     const numNodes = 3
     const handlers = [
-      mockOrchHandler(numNodes, TEST_DEFAULT_ORCH, 'saturn.ms'),
+      mockOrchHandler(numNodes, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN),
       mockJWT(TEST_AUTH),
       ...mockNodesHandlers(numNodes, TEST_ORIGIN_DOMAIN)
     ]
 
     const server = getMockServer(handlers)
     server.listen(MSW_SERVER_OPTS)
-    const saturn = new Saturn({ clientKey: CLIENT_KEY, clientId: 'test', experimental })
+    const saturn = new Saturn({ ...options })
 
     const fetchContentMock = mock.fn(async function * (cidPath, opts) { throw new Error('Fetch error') }) // eslint-disable-line
     saturn.fetchContent = fetchContentMock
@@ -270,14 +276,14 @@ describe('Client Fallback', () => {
   test('Should abort fallback on 410s', async () => {
     const numNodes = 3
     const handlers = [
-      mockOrchHandler(numNodes, TEST_DEFAULT_ORCH, 'saturn.ms'),
+      mockOrchHandler(numNodes, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN),
       mockJWT(TEST_AUTH),
       ...mockNodesHandlers(numNodes, TEST_ORIGIN_DOMAIN, 3, HTTP_STATUS_GONE)
     ]
 
     const server = getMockServer(handlers)
     server.listen(MSW_SERVER_OPTS)
-    const saturn = new Saturn({ clientKey: CLIENT_KEY, clientId: 'test', experimental })
+    const saturn = new Saturn({ ...options })
     await saturn.loadNodesPromise
 
     let error
@@ -299,14 +305,14 @@ describe('Client Fallback', () => {
   test('Should abort fallback on specific errors', async () => {
     const numNodes = 3
     const handlers = [
-      mockOrchHandler(numNodes, TEST_DEFAULT_ORCH, 'saturn.ms'),
+      mockOrchHandler(numNodes, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN),
       mockJWT(TEST_AUTH),
       ...mockNodesHandlers(numNodes, TEST_ORIGIN_DOMAIN, 3, HTTP_STATUS_GONE)
     ]
 
     const server = getMockServer(handlers)
     server.listen(MSW_SERVER_OPTS)
-    const saturn = new Saturn({ clientKey: CLIENT_KEY, clientId: 'test', experimental })
+    const saturn = new Saturn({ ...options })
     await saturn.loadNodesPromise
 
     let callCount = 0
@@ -334,14 +340,14 @@ describe('Client Fallback', () => {
   test('Handles fallback with chunk overlap correctly', async () => {
     const numNodes = 3
     const handlers = [
-      mockOrchHandler(numNodes, TEST_DEFAULT_ORCH, 'saturn.ms'),
+      mockOrchHandler(numNodes, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN),
       mockJWT(TEST_AUTH),
       ...mockNodesHandlers(numNodes, TEST_ORIGIN_DOMAIN)
     ]
 
     const server = getMockServer(handlers)
     server.listen(MSW_SERVER_OPTS)
-    const saturn = new Saturn({ clientKey: CLIENT_KEY, clientId: 'test', experimental })
+    const saturn = new Saturn({ ...options })
 
     let callCount = 0
     const fetchContentMock = mock.fn(async function * (cidPath, opts) {
@@ -373,14 +379,14 @@ describe('Client Fallback', () => {
   test('should handle byte chunk overlaps correctly', async () => {
     const numNodes = 3
     const handlers = [
-      mockOrchHandler(numNodes, TEST_DEFAULT_ORCH, 'saturn.ms'),
+      mockOrchHandler(numNodes, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN),
       mockJWT(TEST_AUTH),
       ...mockNodesHandlers(numNodes, TEST_ORIGIN_DOMAIN)
     ]
 
     const server = getMockServer(handlers)
     server.listen(MSW_SERVER_OPTS)
-    const saturn = new Saturn({ clientKey: CLIENT_KEY, clientId: 'test', experimental })
+    const saturn = new Saturn({ ...options })
 
     let callCount = 0
     let fetchContentMock = mock.fn(async function * (cidPath, opts) {

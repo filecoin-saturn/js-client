@@ -63,6 +63,8 @@ export class Saturn {
    *
    * @param {string} cidPath
    * @param {object} [opts={}]
+   * @param {Node[]} [opts.nodes]
+   * @param {Node} [opts.node]
    * @param {('car'|'raw')} [opts.format]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
@@ -83,17 +85,16 @@ export class Saturn {
       }
     }
 
-    let origins = options.origins
-    if (!origins || origins.length === 0) {
-      const replacementUrl = options.url ?? options.cdnURL
-      origins = [replacementUrl]
+    let nodes = options.nodes
+    if (!nodes || nodes.length === 0) {
+      const replacementNode = options.node ?? { url: this.opts.cdnURL }
+      nodes = [replacementNode]
     }
     const controllers = []
 
-    const createFetchPromise = async (origin) => {
-      const fetchOptions = { ...options, url: origin }
+    const createFetchPromise = async (node) => {
+      const fetchOptions = { ...options, url: node.url }
       const url = this.createRequestURL(cidPath, fetchOptions)
-
       const controller = new AbortController()
       controllers.push(controller)
       const connectTimeout = setTimeout(() => {
@@ -103,11 +104,10 @@ export class Saturn {
       try {
         res = await fetch(parseUrl(url), { signal: controller.signal, ...options })
         clearTimeout(connectTimeout)
-        return { res, url, controller }
+        return { res, url, node, controller }
       } catch (err) {
-        throw new Error(
-          `Non OK response received: ${res.status} ${res.statusText}`
-        )
+        err.node = node
+        throw err
       }
     }
 
@@ -119,17 +119,18 @@ export class Saturn {
       })
     }
 
-    const fetchPromises = Promise.any(origins.map((origin) => createFetchPromise(origin)))
+    const fetchPromises = Promise.any(nodes.map((node) => createFetchPromise(node)))
 
     let log = {
       startTime: new Date()
     }
 
-    let res, url, controller
+    let res, url, controller, node
     try {
-      ({ res, url, controller } = await fetchPromises)
+      ({ res, url, controller, node } = await fetchPromises)
 
       abortRemainingFetches(controller, controllers)
+      log.nodeId = node.id
       log = Object.assign(log, this._generateLog(res, log), { url })
       if (!res.ok) {
         const error = new Error(
@@ -142,6 +143,8 @@ export class Saturn {
       if (!res) {
         log.error = err.message
       }
+      if (err.node) log.nodeId = err.node.id
+
       // Report now if error, otherwise report after download is done.
       this._finalizeLog(log)
 
@@ -156,6 +159,7 @@ export class Saturn {
    * @param {string} cidPath
    * @param {object} [opts={}]
    * @param {('car'|'raw')} [opts.format]
+   * @param {Node} [opts.node]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<object>}
@@ -167,11 +171,15 @@ export class Saturn {
     const jwt = await getJWT(this.opts, this.storage)
 
     const options = Object.assign({}, this.opts, { format: 'car', jwt }, opts)
-    const url = this.createRequestURL(cidPath, options)
+    const node = options.node
+    const origin = node?.url ?? this.opts.cdnURL
+    const url = this.createRequestURL(cidPath, { ...options, url: origin })
+
     let log = {
       url,
       startTime: new Date()
     }
+    if (node?.id) log.nodeId = node.id
 
     const controller = options.controller ?? new AbortController()
     const connectTimeout = setTimeout(() => {
@@ -220,7 +228,7 @@ export class Saturn {
     const { headers } = res
     log.httpStatusCode = res.status
     log.cacheHit = headers.get('saturn-cache-status') === 'HIT'
-    log.nodeId = headers.get('saturn-node-id')
+    log.nodeId = log.nodeId ?? headers.get('saturn-node-id')
     log.requestId = headers.get('saturn-transfer-id')
     log.httpProtocol = headers.get('quic-status')
 
@@ -294,10 +302,9 @@ export class Saturn {
         return
       }
       if (opts.raceNodes) {
-        const origins = nodes.slice(i, i + Saturn.defaultRaceCount).map((node) => node.url)
-        opts.origins = origins
+        opts.nodes = nodes.slice(i, i + Saturn.defaultRaceCount)
       } else {
-        opts.url = nodes[i].url
+        opts.node = nodes[i]
       }
 
       try {
@@ -376,10 +383,11 @@ export class Saturn {
    *
    * @param {string} cidPath
    * @param {object} [opts={}]
+   * @param {string} [opts.url]
    * @returns {URL}
    */
   createRequestURL (cidPath, opts) {
-    let origin = opts.url || (opts.origins && opts.origins[0]) || opts.cdnURL
+    let origin = opts.url ?? this.opts.cdnURL
     origin = addHttpPrefix(origin)
     const url = new URL(`${origin}/ipfs/${cidPath}`)
 
