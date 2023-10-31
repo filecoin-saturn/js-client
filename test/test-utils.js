@@ -9,8 +9,9 @@ import { fileURLToPath } from 'node:url'
 import fs from 'fs'
 import { addHttpPrefix } from '../src/utils/url.js'
 
-const HTTP_STATUS_OK = 200
-const HTTP_STATUS_TIMEOUT = 504
+export const HTTP_STATUS_OK = 200
+export const HTTP_STATUS_TIMEOUT = 504
+export const HTTP_STATUS_GONE = 410
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 process.env.TESTING = 'true'
@@ -32,6 +33,7 @@ export function generateNodes (count, originDomain) {
     const nodeIp = `node${i}`
     const node = {
       ip: nodeIp,
+      id: nodeIp,
       weight: 50,
       distance: 100,
       url: `https://${nodeIp}.${originDomain}`
@@ -51,6 +53,7 @@ export function generateNodes (count, originDomain) {
  */
 export function mockSaturnOriginHandler (cdnURL, delay = 0, error = false) {
   cdnURL = addHttpPrefix(cdnURL)
+  cdnURL = `${cdnURL}/ipfs/:cid`
   return rest.get(cdnURL, (req, res, ctx) => {
     if (error) {
       throw Error('Simulated Error')
@@ -120,20 +123,20 @@ export function mockJWT (authURL) {
  * @param {number} count - amount of nodes to mock
  * @param {string} originDomain - saturn origin domain.
  * @param {number} failures
+ * @param {number} failureCode
  * @returns {RestHandler<any>[]}
  */
-export function mockNodesHandlers (count, originDomain, failures = 0) {
+export function mockNodesHandlers (count, originDomain, failures = 0, failureCode = HTTP_STATUS_TIMEOUT) {
   if (failures > count) {
     throw Error('failures number cannot exceed node count')
   }
   const nodes = generateNodes(count, originDomain)
-
   const handlers = nodes.map((node, idx) => {
     const url = `${node.url}/ipfs/:cid`
     return rest.get(url, (req, res, ctx) => {
       if (idx < failures) {
         return res(
-          ctx.status(HTTP_STATUS_TIMEOUT)
+          ctx.status(failureCode)
         )
       }
       const filepath = getFixturePath('hello.car')
