@@ -228,7 +228,7 @@ export class Saturn {
     const { headers } = res
     log.httpStatusCode = res.status
     log.cacheHit = headers.get('saturn-cache-status') === 'HIT'
-    log.nodeId = headers.get('saturn-node-id')
+    log.nodeId = log.nodeId ?? headers.get('saturn-node-id')
     log.requestId = headers.get('saturn-transfer-id')
     log.httpProtocol = headers.get('quic-status')
 
