@@ -263,7 +263,7 @@ export class Saturn {
 
     const fetchContent = async function * (options) {
       let byteCount = 0
-      const fetchOptions = Object.assign(opts, options)
+      const fetchOptions = Object.assign(opts, { format: 'car' }, options)
       const byteChunks = await this.fetchContent(cidPath, fetchOptions)
       for await (const chunk of byteChunks) {
         // avoid sending duplicate chunks
@@ -328,7 +328,7 @@ export class Saturn {
       if (originUrl) {
         opts.nodes = Array({ url: originUrl })
         try {
-          yield * fetchContent({ flatFile: true })
+          yield * fetchContent({ format: null })
           return
         } catch (err) {
           lastError = err
@@ -344,7 +344,6 @@ export class Saturn {
    * @param {object} [opts={}]
    * @param {('car'|'raw')} [opts.format]
    * @param {boolean} [opts.raceNodes]
-   * @param {boolean}  [opts.flatFile]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<AsyncIterable<Uint8Array>>}
@@ -369,10 +368,10 @@ export class Saturn {
 
     try {
       const itr = metricsIterable(asAsyncIterable(res.body))
-      if (opts.flatFile) {
-        yield * itr
-      } else {
+      if (opts.format === 'car') {
         yield * extractVerifiedContent(cidPath, itr)
+      } else {
+        yield * itr
       }
     } catch (err) {
       log.error = err.message
@@ -403,14 +402,17 @@ export class Saturn {
    * @param {string} cidPath
    * @param {object} [opts={}]
    * @param {string} [opts.url]
+   * @param {string} [opts.format]
+   * @param {object} [opts.jwt]
    * @returns {URL}
    */
-  createRequestURL (cidPath, opts) {
+  createRequestURL (cidPath, opts = {}) {
     let origin = opts.url ?? this.opts.cdnURL
     origin = addHttpPrefix(origin)
     const url = new URL(`${origin}/ipfs/${cidPath}`)
 
-    url.searchParams.set('format', opts.format)
+    if (opts.format) url.searchParams.set('format', opts.format)
+
     if (opts.format === 'car') {
       url.searchParams.set('dag-scope', 'entity')
     }
