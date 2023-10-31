@@ -261,9 +261,10 @@ export class Saturn {
       throw new Error(`All attempts to fetch content have failed. Last error: ${lastError.message}`)
     }
 
-    const fetchContent = async function * () {
+    const fetchContent = async function * (options) {
       let byteCount = 0
-      const byteChunks = await this.fetchContent(cidPath, opts)
+      const fetchOptions = Object.assign(opts, options)
+      const byteChunks = await this.fetchContent(cidPath, fetchOptions)
       for await (const chunk of byteChunks) {
         // avoid sending duplicate chunks
         if (byteCount < byteCountCheckpoint) {
@@ -327,7 +328,7 @@ export class Saturn {
       if (originUrl) {
         opts.nodes = Array({ url: originUrl })
         try {
-          yield * fetchContent()
+          yield * fetchContent({ flatFile: true })
           return
         } catch (err) {
           lastError = err
@@ -343,6 +344,7 @@ export class Saturn {
    * @param {object} [opts={}]
    * @param {('car'|'raw')} [opts.format]
    * @param {boolean} [opts.raceNodes]
+   * @param {boolean}  [opts.flatFile]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<AsyncIterable<Uint8Array>>}
@@ -367,7 +369,11 @@ export class Saturn {
 
     try {
       const itr = metricsIterable(asAsyncIterable(res.body))
-      yield * extractVerifiedContent(cidPath, itr)
+      if (opts.flatFile) {
+        yield * itr
+      } else {
+        yield * extractVerifiedContent(cidPath, itr)
+      }
     } catch (err) {
       log.error = err.message
       controller.abort()

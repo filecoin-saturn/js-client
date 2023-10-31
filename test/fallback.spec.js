@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { describe, mock, test } from 'node:test'
 
 import { Saturn } from '#src/index.js'
-import { concatChunks, generateNodes, getMockServer, HTTP_STATUS_GONE, HTTP_STATUS_TIMEOUT, mockJWT, mockNodesHandlers, mockOrchHandler, mockOriginHandler, MSW_SERVER_OPTS } from './test-utils.js'
+import { concatChunks, generateNodes, getMockServer, HTTP_STATUS_GONE, HTTP_STATUS_TIMEOUT, mockFlatFileOriginHandler, mockJWT, mockNodesHandlers, mockOrchHandler, mockOriginHandler, MSW_SERVER_OPTS } from './test-utils.js'
 
 const TEST_DEFAULT_ORCH = 'https://orchestrator.strn.pl.test/nodes'
 const TEST_NODES_LIST_KEY = 'saturn-nodes'
@@ -280,7 +280,7 @@ describe('Client Fallback', () => {
       mockOrchHandler(numNodes, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN),
       mockJWT(TEST_AUTH),
       mockOriginHandler(TEST_ORIGIN_DOMAIN, 0, true),
-      mockOriginHandler(TEST_CUSTOMER_ORIGIN, 0, false),
+      mockFlatFileOriginHandler(TEST_CUSTOMER_ORIGIN, 0, false),
       ...mockNodesHandlers(numNodes, TEST_ORIGIN_DOMAIN, numNodes, HTTP_STATUS_TIMEOUT)
     ]
 
@@ -303,9 +303,10 @@ describe('Client Fallback', () => {
 
     const buffer = await concatChunks(cid)
     const actualContent = String.fromCharCode(...buffer)
-    const expectedContent = 'hello world\n'
+    const jsonContent = JSON.parse(actualContent)
+    const expectedContent = JSON.parse('{ "hello": "world" }')
 
-    assert.strictEqual(actualContent, expectedContent)
+    assert.deepEqual(jsonContent, expectedContent)
     mock.reset()
     server.close()
   })
