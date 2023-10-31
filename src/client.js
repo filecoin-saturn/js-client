@@ -261,10 +261,9 @@ export class Saturn {
       throw new Error(`All attempts to fetch content have failed. Last error: ${lastError.message}`)
     }
 
-    const fetchContent = async function * (options) {
+    const fetchContent = async function * () {
       let byteCount = 0
-      const fetchOptions = Object.assign(opts, options)
-      const byteChunks = await this.fetchContent(cidPath, fetchOptions)
+      const byteChunks = await this.fetchContent(cidPath, opts)
       for await (const chunk of byteChunks) {
         // avoid sending duplicate chunks
         if (byteCount < byteCountCheckpoint) {
