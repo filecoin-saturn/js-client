@@ -301,11 +301,8 @@ export class Saturn {
     let fallbackCount = 0
     const nodes = this.nodes
     for (let i = 0; i < nodes.length; i++) {
-      if (skipNodes) {
+      if (fallbackCount > this.opts.fallbackLimit || skipNodes) {
         break
-      }
-      if (fallbackCount > this.opts.fallbackLimit) {
-        return
       }
       if (opts.raceNodes) {
         opts.nodes = nodes.slice(i, i + Saturn.defaultRaceCount)
