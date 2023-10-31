@@ -28,6 +28,7 @@ export class Saturn {
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @param {string} [opts.orchURL]
+   * @param {string} [opts.originURL]
    * @param {number} [opts.fallbackLimit]
    * @param {boolean} [opts.experimental]
    * @param {import('./storage/index.js').Storage} [opts.storage]
@@ -64,7 +65,6 @@ export class Saturn {
    * @param {string} cidPath
    * @param {object} [opts={}]
    * @param {Node[]} [opts.nodes]
-   * @param {Node} [opts.node]
    * @param {('car'|'raw')} [opts.format]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
@@ -87,7 +87,7 @@ export class Saturn {
 
     let nodes = options.nodes
     if (!nodes || nodes.length === 0) {
-      const replacementNode = options.node ?? { url: this.opts.cdnURL }
+      const replacementNode = { url: this.opts.cdnURL }
       nodes = [replacementNode]
     }
     const controllers = []
@@ -159,7 +159,7 @@ export class Saturn {
    * @param {string} cidPath
    * @param {object} [opts={}]
    * @param {('car'|'raw')} [opts.format]
-   * @param {Node} [opts.node]
+   * @param {Node[]} [opts.nodes]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<object>}
@@ -171,7 +171,7 @@ export class Saturn {
     const jwt = await getJWT(this.opts, this.storage)
 
     const options = Object.assign({}, this.opts, { format: 'car', jwt }, opts)
-    const node = options.node
+    const node = options.nodes && options.nodes[0]
     const origin = node?.url ?? this.opts.cdnURL
     const url = this.createRequestURL(cidPath, { ...options, url: origin })
 
@@ -245,13 +245,14 @@ export class Saturn {
    * @param {object} [opts={}]
    * @param {('car'|'raw')} [opts.format]
    * @param {boolean} [opts.raceNodes]
-   * @param {string} [opts.url]
+   * @param {string} [opts.originURL]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<AsyncIterable<Uint8Array>>}
    */
   async * fetchContentWithFallback (cidPath, opts = {}) {
     let lastError = null
+    let skipNodes = false
     // we use this to checkpoint at which chunk a request failed.
     // this is temporary until range requests are supported.
     let byteCountCheckpoint = 0
@@ -260,9 +261,10 @@ export class Saturn {
       throw new Error(`All attempts to fetch content have failed. Last error: ${lastError.message}`)
     }
 
-    const fetchContent = async function * () {
+    const fetchContent = async function * (options) {
       let byteCount = 0
-      const byteChunks = await this.fetchContent(cidPath, opts)
+      const fetchOptions = Object.assign(opts, options)
+      const byteChunks = await this.fetchContent(cidPath, fetchOptions)
       for await (const chunk of byteChunks) {
         // avoid sending duplicate chunks
         if (byteCount < byteCountCheckpoint) {
@@ -280,33 +282,37 @@ export class Saturn {
       }
     }.bind(this)
 
+    // Use CDN origin if node list is not loaded
     if (this.nodes.length === 0) {
       // fetch from origin in the case that no nodes are loaded
-      opts.url = this.opts.cdnURL
+      opts.nodes = Array({ url: this.opts.cdnURL })
       try {
         yield * fetchContent()
         return
       } catch (err) {
         lastError = err
         if (err.res?.status === 410 || isErrorUnavoidable(err)) {
-          throwError()
+          skipNodes = true
+        } else {
+          await this.loadNodesPromise
         }
-        await this.loadNodesPromise
       }
     }
 
     let fallbackCount = 0
     const nodes = this.nodes
     for (let i = 0; i < nodes.length; i++) {
+      if (skipNodes) {
+        break
+      }
       if (fallbackCount > this.opts.fallbackLimit) {
         return
       }
       if (opts.raceNodes) {
         opts.nodes = nodes.slice(i, i + Saturn.defaultRaceCount)
       } else {
-        opts.node = nodes[i]
+        opts.nodes = Array(nodes[i])
       }
-
       try {
         yield * fetchContent()
         return
@@ -320,6 +326,17 @@ export class Saturn {
     }
 
     if (lastError) {
+      const originUrl = opts.originURL ?? this.opts.originURL
+      // Use customer origin if cid is not retrievable by lassie.
+      if (originUrl) {
+        opts.nodes = Array({ url: originUrl })
+        try {
+          yield * fetchContent()
+          return
+        } catch (err) {
+          lastError = err
+        }
+      }
       throwError()
     }
   }

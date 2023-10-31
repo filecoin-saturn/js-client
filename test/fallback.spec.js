@@ -3,12 +3,13 @@ import assert from 'node:assert/strict'
 import { describe, mock, test } from 'node:test'
 
 import { Saturn } from '#src/index.js'
-import { concatChunks, generateNodes, getMockServer, HTTP_STATUS_GONE, mockJWT, mockNodesHandlers, mockOrchHandler, mockSaturnOriginHandler, MSW_SERVER_OPTS } from './test-utils.js'
+import { concatChunks, generateNodes, getMockServer, HTTP_STATUS_GONE, HTTP_STATUS_TIMEOUT, mockJWT, mockNodesHandlers, mockOrchHandler, mockOriginHandler, MSW_SERVER_OPTS } from './test-utils.js'
 
 const TEST_DEFAULT_ORCH = 'https://orchestrator.strn.pl.test/nodes'
 const TEST_NODES_LIST_KEY = 'saturn-nodes'
 const TEST_AUTH = 'https://auth.test/'
 const TEST_ORIGIN_DOMAIN = 'l1s.saturn.test'
+const TEST_CUSTOMER_ORIGIN = 'customer.test'
 const CLIENT_KEY = 'key'
 
 const options = {
@@ -120,7 +121,7 @@ describe('Client Fallback', () => {
     const handlers = [
       mockOrchHandler(2, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN),
       mockJWT(TEST_AUTH),
-      mockSaturnOriginHandler(TEST_ORIGIN_DOMAIN, 0, true),
+      mockOriginHandler(TEST_ORIGIN_DOMAIN, 0, true),
       ...mockNodesHandlers(2, TEST_ORIGIN_DOMAIN)
     ]
     const server = getMockServer(handlers)
@@ -153,7 +154,7 @@ describe('Client Fallback', () => {
     const handlers = [
       mockOrchHandler(5, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN),
       mockJWT(TEST_AUTH),
-      mockSaturnOriginHandler(TEST_ORIGIN_DOMAIN, 0, true),
+      mockOriginHandler(TEST_ORIGIN_DOMAIN, 0, true),
       ...mockNodesHandlers(5, TEST_ORIGIN_DOMAIN)
     ]
     const server = getMockServer(handlers)
@@ -186,7 +187,7 @@ describe('Client Fallback', () => {
     const handlers = [
       mockOrchHandler(5, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN),
       mockJWT(TEST_AUTH),
-      mockSaturnOriginHandler(TEST_ORIGIN_DOMAIN, 0, true),
+      mockOriginHandler(TEST_ORIGIN_DOMAIN, 0, true),
       ...mockNodesHandlers(5, TEST_ORIGIN_DOMAIN, 2)
     ]
     const server = getMockServer(handlers)
@@ -269,6 +270,42 @@ describe('Client Fallback', () => {
     assert(error)
     assert.strictEqual(error.message, 'All attempts to fetch content have failed. Last error: Fetch error')
     assert.strictEqual(fetchContentMock.mock.calls.length, numNodes + 1)
+    mock.reset()
+    server.close()
+  })
+
+  test('should hit origin if failed to fetch', async (t) => {
+    const numNodes = 3
+    const handlers = [
+      mockOrchHandler(numNodes, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN),
+      mockJWT(TEST_AUTH),
+      mockOriginHandler(TEST_ORIGIN_DOMAIN, 0, true),
+      mockOriginHandler(TEST_CUSTOMER_ORIGIN, 0, false),
+      ...mockNodesHandlers(numNodes, TEST_ORIGIN_DOMAIN, numNodes, HTTP_STATUS_TIMEOUT)
+    ]
+
+    const server = getMockServer(handlers)
+    server.listen(MSW_SERVER_OPTS)
+
+    const expectedNodes = generateNodes(5, TEST_ORIGIN_DOMAIN)
+
+    // Mocking storage object
+    const mockStorage = {
+      get: async (key) => expectedNodes,
+      set: async (key, value) => { return null }
+    }
+    t.mock.method(mockStorage, 'get')
+    t.mock.method(mockStorage, 'set')
+
+    const saturn = new Saturn({ storage: mockStorage, originURL: TEST_CUSTOMER_ORIGIN, ...options })
+
+    const cid = saturn.fetchContentWithFallback('bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4', { raceNodes: true })
+
+    const buffer = await concatChunks(cid)
+    const actualContent = String.fromCharCode(...buffer)
+    const expectedContent = 'hello world\n'
+
+    assert.strictEqual(actualContent, expectedContent)
     mock.reset()
     server.close()
   })
