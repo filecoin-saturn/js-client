@@ -28,7 +28,7 @@ export class Saturn {
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @param {string} [opts.orchURL]
-   * @param {string} [opts.originURL]
+   * @param {string} [opts.customerFallbackURL]
    * @param {number} [opts.fallbackLimit]
    * @param {boolean} [opts.experimental]
    * @param {import('./storage/index.js').Storage} [opts.storage]
@@ -245,7 +245,7 @@ export class Saturn {
    * @param {object} [opts={}]
    * @param {('car'|'raw')} [opts.format]
    * @param {boolean} [opts.raceNodes]
-   * @param {string} [opts.originURL]
+   * @param {string} [opts.customerFallbackURL]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
    * @returns {Promise<AsyncIterable<Uint8Array>>}
@@ -323,7 +323,7 @@ export class Saturn {
     }
 
     if (lastError) {
-      const originUrl = opts.originURL ?? this.opts.originURL
+      const originUrl = opts.customerFallbackURL ?? this.opts.customerFallbackURL
       // Use customer origin if cid is not retrievable by lassie.
       if (originUrl) {
         opts.nodes = Array({ url: originUrl })

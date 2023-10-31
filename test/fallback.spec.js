@@ -297,7 +297,7 @@ describe('Client Fallback', () => {
     t.mock.method(mockStorage, 'get')
     t.mock.method(mockStorage, 'set')
 
-    const saturn = new Saturn({ storage: mockStorage, originURL: TEST_CUSTOMER_ORIGIN, ...options })
+    const saturn = new Saturn({ storage: mockStorage, customerFallbackURL: TEST_CUSTOMER_ORIGIN, ...options })
 
     const cid = saturn.fetchContentWithFallback('bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4', { raceNodes: true })
 
