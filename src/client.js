@@ -22,19 +22,19 @@ export class Saturn {
   static defaultRaceCount = 3
   /**
    *
-   * @param {object} [opts={}]
-   * @param {string} [opts.clientKey]
-   * @param {string} [opts.clientId=randomUUID()]
-   * @param {string} [opts.cdnURL=saturn.ms]
-   * @param {number} [opts.connectTimeout=5000]
-   * @param {number} [opts.downloadTimeout=0]
-   * @param {string} [opts.orchURL]
-   * @param {string} [opts.customerFallbackURL]
-   * @param {number} [opts.fallbackLimit]
-   * @param {boolean} [opts.experimental]
-   * @param {import('./storage/index.js').Storage} [opts.storage]
+   * @param {object} [config={}]
+   * @param {string} [config.clientKey]
+   * @param {string} [config.clientId=randomUUID()]
+   * @param {string} [config.cdnURL=saturn.ms]
+   * @param {number} [config.connectTimeout=5000]
+   * @param {number} [config.downloadTimeout=0]
+   * @param {string} [config.orchURL]
+   * @param {string} [config.customerFallbackURL]
+   * @param {number} [config.fallbackLimit]
+   * @param {boolean} [config.experimental]
+   * @param {import('./storage/index.js').Storage} [config.storage]
    */
-  constructor (opts = {}) {
+  constructor (config = {}) {
     this.config = Object.assign({}, {
       clientId: randomUUID(),
       cdnURL: 'l1s.saturn.ms',
@@ -44,7 +44,7 @@ export class Saturn {
       fallbackLimit: 5,
       connectTimeout: 5_000,
       downloadTimeout: 0
-    }, opts)
+    }, config)
 
     if (!this.config.clientKey) {
       throw new Error('clientKey is required')
@@ -69,7 +69,6 @@ export class Saturn {
    */
   async fetchCIDWithRace (cidPath, opts = {}) {
     const options = Object.assign({}, this.config, { format: 'car ' }, opts)
-
     if (!opts.originFallback) {
       const [cid] = (cidPath ?? '').split('/')
       CID.parse(cid)
@@ -160,7 +159,7 @@ export class Saturn {
    * @returns {Promise<object>}
    */
   async fetchCID (cidPath, opts = {}) {
-    const options = Object.assign({}, this.config, { format: 'car ' }, opts)
+    const options = Object.assign({}, this.config, { format: 'car' }, opts)
     if (!opts.originFallback) {
       const [cid] = (cidPath ?? '').split('/')
       CID.parse(cid)
