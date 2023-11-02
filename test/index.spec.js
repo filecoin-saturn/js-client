@@ -38,7 +38,7 @@ describe('Saturn client', () => {
   })
 
   describe('Fetch a CID', () => {
-    const client = new Saturn({ clientKey })
+    const client = new Saturn({ clientKey, authURL: TEST_AUTH })
     const handlers = [
       mockJWT(TEST_AUTH)
     ]
@@ -86,7 +86,7 @@ describe('Saturn client', () => {
       mockJWT(TEST_AUTH)
     ]
     const server = getMockServer(handlers)
-    const client = new Saturn({ clientKey, clientId: 'tesd' })
+    const client = new Saturn({ clientKey, clientId: 'tesd', authURL: TEST_AUTH })
     before(() => {
       server.listen(MSW_SERVER_OPTS)
     })
