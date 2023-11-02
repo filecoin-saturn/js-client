@@ -248,9 +248,13 @@ export class Saturn {
    * @param {string} [opts.url]
    * @param {number} [opts.connectTimeout=5000]
    * @param {number} [opts.downloadTimeout=0]
+   * @param {AbortController} [opts.controller]
    * @returns {Promise<AsyncIterable<Uint8Array>>}
    */
   async * fetchContentWithFallback (cidPath, opts = {}) {
+    const upstreamController = opts.controller;
+    delete opts.controller;
+
     let lastError = null
     // we use this to checkpoint at which chunk a request failed.
     // this is temporary until range requests are supported.
@@ -261,6 +265,13 @@ export class Saturn {
     }
 
     const fetchContent = async function * () {
+      const controller = new AbortController();
+      opts.controller = controller;
+      if (upstreamController) {
+        upstreamController.signal.addEventListener('abort', () => {
+          controller.abort();
+        });
+      }
       let byteCount = 0
       const byteChunks = await this.fetchContent(cidPath, opts)
       for await (const chunk of byteChunks) {
