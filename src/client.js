@@ -160,7 +160,7 @@ export class Saturn {
    * @returns {Promise<object>}
    */
   async fetchCID (cidPath, opts = {}) {
-    const options = Object.assign({}, this.config, { format: 'car '} opts)
+    const options = Object.assign({}, this.config, { format: 'car ' }, opts)
     if (!opts.originFallback) {
       const [cid] = (cidPath ?? '').split('/')
       CID.parse(cid)
@@ -306,7 +306,6 @@ export class Saturn {
         yield * fetchContent()
         return
       } catch (err) {
-        console.log(err)
         lastError = err
         if (err.res?.status === 410 || isErrorUnavoidable(err)) {
           break
