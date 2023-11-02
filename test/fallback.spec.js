@@ -9,7 +9,7 @@ const TEST_DEFAULT_ORCH = 'https://orchestrator.strn.pl.test/nodes'
 const TEST_NODES_LIST_KEY = 'saturn-nodes'
 const TEST_AUTH = 'https://auth.test/'
 const TEST_ORIGIN_DOMAIN = 'l1s.saturn.test'
-const TEST_CUSTOMER_ORIGIN = 'customer.test'
+const TEST_CUSTOMER_ORIGIN = 'customer.test/ipfs/bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4'
 const CLIENT_KEY = 'key'
 
 const options = {
@@ -299,7 +299,7 @@ describe('Client Fallback', () => {
 
     const saturn = new Saturn({ storage: mockStorage, customerFallbackURL: TEST_CUSTOMER_ORIGIN, ...options })
 
-    const cid = saturn.fetchContentWithFallback('bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4', { raceNodes: true })
+    const cid = saturn.fetchContentWithFallback(TEST_CUSTOMER_ORIGIN, { raceNodes: true })
 
     const buffer = await concatChunks(cid)
     const actualContent = String.fromCharCode(...buffer)

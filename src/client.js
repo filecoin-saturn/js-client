@@ -68,12 +68,15 @@ export class Saturn {
    * @returns {Promise<object>}
    */
   async fetchCIDWithRace (cidPath, opts = {}) {
-    const [cid] = (cidPath ?? '').split('/')
-    CID.parse(cid)
+    const options = Object.assign({}, this.opts, opts)
+    if (!opts.originFallback) {
+      const [cid] = (cidPath ?? '').split('/')
+      CID.parse(cid)
+      const jwt = await getJWT(this.opts, this.storage)
+      options.jwt = jwt
+    }
 
-    const jwt = await getJWT(this.opts, this.storage)
-
-    const options = Object.assign({}, this.opts, { format: 'car', jwt }, opts)
+    options.format = opts.format ? opts.format : 'car'
 
     if (!isBrowserContext) {
       options.headers = {
@@ -158,12 +161,15 @@ export class Saturn {
    * @returns {Promise<object>}
    */
   async fetchCID (cidPath, opts = {}) {
-    const [cid] = (cidPath ?? '').split('/')
-    CID.parse(cid)
+    const options = Object.assign({}, this.opts, opts)
+    if (!opts.originFallback) {
+      const [cid] = (cidPath ?? '').split('/')
+      CID.parse(cid)
+      const jwt = await getJWT(this.opts, this.storage)
+      options.jwt = jwt
+    }
+    options.format = opts.format ? opts.format : 'car'
 
-    const jwt = await getJWT(this.opts, this.storage)
-
-    const options = Object.assign({}, this.opts, { format: 'car', jwt }, opts)
     const node = options.nodes && options.nodes[0]
     const origin = node?.url ?? this.opts.cdnURL
     const url = this.createRequestURL(cidPath, { ...options, url: origin })
@@ -316,7 +322,7 @@ export class Saturn {
       if (originUrl) {
         opts.nodes = Array({ url: originUrl })
         try {
-          yield * fetchContent({ format: null })
+          yield * fetchContent({ format: null, originFallback: true })
           return
         } catch (err) {
           lastError = err
@@ -383,12 +389,16 @@ export class Saturn {
    * @param {object} [opts={}]
    * @param {string} [opts.url]
    * @param {string} [opts.format]
+   * @param {string} [opts.originFallback]
    * @param {object} [opts.jwt]
    * @returns {URL}
    */
   createRequestURL (cidPath, opts = {}) {
     let origin = opts.url ?? this.opts.cdnURL
     origin = addHttpPrefix(origin)
+    if (opts.originFallback) {
+      return new URL(origin)
+    }
     const url = new URL(`${origin}/ipfs/${cidPath}`)
 
     if (opts.format) url.searchParams.set('format', opts.format)
