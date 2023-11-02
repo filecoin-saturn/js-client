@@ -309,7 +309,7 @@ export class Saturn {
     let fallbackCount = 0
     const nodes = this.nodes
     for (let i = 0; i < nodes.length; i++) {
-      if (fallbackCount > this.opts.fallbackLimit) {
+      if (fallbackCount > this.opts.fallbackLimit || upstreamController?.signal.aborted) {
         return
       }
       if (opts.raceNodes) {
