@@ -78,7 +78,6 @@ export function mockOriginHandler (originUrl, delay = 0, error = false) {
  */
 export function mockFlatFileOriginHandler (originUrl, delay = 0, error = false) {
   originUrl = addHttpPrefix(originUrl)
-  originUrl = `${originUrl}`
   return rest.get(originUrl, (req, res, ctx) => {
     if (error) {
       throw Error('Simulated Error')
