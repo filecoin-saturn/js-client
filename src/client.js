@@ -68,7 +68,7 @@ export class Saturn {
    * @returns {Promise<object>}
    */
   async fetchCIDWithRace (cidPath, opts = {}) {
-    const options = Object.assign({}, this.config, { format: 'car ' }, opts)
+    const options = Object.assign({}, this.config, { format: 'car' }, opts)
     if (!opts.originFallback) {
       const [cid] = (cidPath ?? '').split('/')
       CID.parse(cid)
@@ -163,7 +163,7 @@ export class Saturn {
     if (!opts.originFallback) {
       const [cid] = (cidPath ?? '').split('/')
       CID.parse(cid)
-      const jwt = await getJWT(options, this.storage)
+      const jwt = await getJWT(this.config, this.storage)
       options.jwt = jwt
     }
 
