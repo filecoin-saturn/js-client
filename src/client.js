@@ -35,7 +35,7 @@ export class Saturn {
    * @param {import('./storage/index.js').Storage} [opts.storage]
    */
   constructor (opts = {}) {
-    this.opts = Object.assign({}, {
+    this.config = Object.assign({}, {
       clientId: randomUUID(),
       cdnURL: 'l1s.saturn.ms',
       logURL: 'https://twb3qukm2i654i3tnvx36char40aymqq.lambda-url.us-west-2.on.aws/',
@@ -46,7 +46,7 @@ export class Saturn {
       downloadTimeout: 0
     }, opts)
 
-    if (!this.opts.clientKey) {
+    if (!this.config.clientKey) {
       throw new Error('clientKey is required')
     }
 
@@ -57,8 +57,8 @@ export class Saturn {
     if (this.reportingLogs && this.hasPerformanceAPI) {
       this._monitorPerformanceBuffer()
     }
-    this.storage = this.opts.storage || memoryStorage()
-    this.loadNodesPromise = this.opts.experimental ? this._loadNodes(this.opts) : null
+    this.storage = this.config.storage || memoryStorage()
+    this.loadNodesPromise = this.config.experimental ? this._loadNodes(this.config) : null
   }
 
   /**
@@ -68,15 +68,14 @@ export class Saturn {
    * @returns {Promise<object>}
    */
   async fetchCIDWithRace (cidPath, opts = {}) {
-    const options = Object.assign({}, this.opts, opts)
+    const options = Object.assign({}, this.config, { format: 'car ' }, opts)
+
     if (!opts.originFallback) {
       const [cid] = (cidPath ?? '').split('/')
       CID.parse(cid)
-      const jwt = await getJWT(this.opts, this.storage)
+      const jwt = await getJWT(options, this.storage)
       options.jwt = jwt
     }
-
-    options.format = opts.format ? opts.format : 'car'
 
     if (!isBrowserContext) {
       options.headers = {
@@ -87,7 +86,7 @@ export class Saturn {
 
     let nodes = options.nodes
     if (!nodes || nodes.length === 0) {
-      const replacementNode = { url: this.opts.cdnURL }
+      const replacementNode = { url: options.cdnURL }
       nodes = [replacementNode]
     }
     const controllers = []
@@ -161,17 +160,16 @@ export class Saturn {
    * @returns {Promise<object>}
    */
   async fetchCID (cidPath, opts = {}) {
-    const options = Object.assign({}, this.opts, opts)
+    const options = Object.assign({}, this.config, { format: 'car '} opts)
     if (!opts.originFallback) {
       const [cid] = (cidPath ?? '').split('/')
       CID.parse(cid)
-      const jwt = await getJWT(this.opts, this.storage)
+      const jwt = await getJWT(options, this.storage)
       options.jwt = jwt
     }
-    options.format = opts.format ? opts.format : 'car'
 
     const node = options.nodes && options.nodes[0]
-    const origin = node?.url ?? this.opts.cdnURL
+    const origin = node?.url ?? this.config.cdnURL
     const url = this.createRequestURL(cidPath, { ...options, url: origin })
 
     let log = {
@@ -279,7 +277,7 @@ export class Saturn {
     // Use CDN origin if node list is not loaded
     if (this.nodes.length === 0) {
       // fetch from origin in the case that no nodes are loaded
-      opts.nodes = Array({ url: this.opts.cdnURL })
+      opts.nodes = Array({ url: this.config.cdnURL })
       try {
         yield * fetchContent()
         return
@@ -296,7 +294,7 @@ export class Saturn {
     let fallbackCount = 0
     const nodes = this.nodes
     for (let i = 0; i < nodes.length; i++) {
-      if (fallbackCount > this.opts.fallbackLimit || skipNodes) {
+      if (fallbackCount > this.config.fallbackLimit || skipNodes) {
         break
       }
       if (opts.raceNodes) {
@@ -308,6 +306,7 @@ export class Saturn {
         yield * fetchContent()
         return
       } catch (err) {
+        console.log(err)
         lastError = err
         if (err.res?.status === 410 || isErrorUnavoidable(err)) {
           break
@@ -317,7 +316,7 @@ export class Saturn {
     }
 
     if (lastError) {
-      const originUrl = opts.customerFallbackURL ?? this.opts.customerFallbackURL
+      const originUrl = opts.customerFallbackURL ?? this.config.customerFallbackURL
       // Use customer origin if cid is not retrievable by lassie.
       if (originUrl) {
         opts.nodes = Array({ url: originUrl })
@@ -394,7 +393,7 @@ export class Saturn {
    * @returns {URL}
    */
   createRequestURL (cidPath, opts = {}) {
-    let origin = opts.url ?? this.opts.cdnURL
+    let origin = opts.url ?? this.config.cdnURL
     origin = addHttpPrefix(origin)
     if (opts.originFallback) {
       return new URL(origin)
@@ -444,10 +443,10 @@ export class Saturn {
       : this.logs
 
     await fetch(
-      this.opts.logURL,
+      this.config.logURL,
       {
         method: 'POST',
-        body: JSON.stringify({ bandwidthLogs, logSender: this.opts.logSender })
+        body: JSON.stringify({ bandwidthLogs, logSender: this.config.logSender })
       }
     )
 
@@ -569,7 +568,7 @@ export class Saturn {
 
     const url = new URL(origin)
     const controller = new AbortController()
-    const options = Object.assign({}, { method: 'GET' }, this.opts)
+    const options = Object.assign({}, { method: 'GET' }, this.config)
 
     const connectTimeout = setTimeout(() => {
       controller.abort()
