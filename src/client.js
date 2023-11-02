@@ -14,6 +14,7 @@ import { isErrorUnavoidable } from './utils/errors.js'
 const MAX_NODE_WEIGHT = 100
 /**
  * @typedef {import('./types.js').Node} Node
+ * @typedef {import('./types.js').FetchOptions} FetchOptions
  */
 
 export class Saturn {
@@ -63,11 +64,7 @@ export class Saturn {
   /**
    *
    * @param {string} cidPath
-   * @param {object} [opts={}]
-   * @param {Node[]} [opts.nodes]
-   * @param {('car'|'raw')} [opts.format]
-   * @param {number} [opts.connectTimeout=5000]
-   * @param {number} [opts.downloadTimeout=0]
+   * @param {FetchOptions} [opts={}]
    * @returns {Promise<object>}
    */
   async fetchCIDWithRace (cidPath, opts = {}) {
@@ -157,11 +154,7 @@ export class Saturn {
   /**
    *
    * @param {string} cidPath
-   * @param {object} [opts={}]
-   * @param {('car'|'raw')} [opts.format]
-   * @param {Node[]} [opts.nodes]
-   * @param {number} [opts.connectTimeout=5000]
-   * @param {number} [opts.downloadTimeout=0]
+   * @param {FetchOptions} [opts={}]
    * @returns {Promise<object>}
    */
   async fetchCID (cidPath, opts = {}) {
@@ -242,12 +235,7 @@ export class Saturn {
   /**
    *
    * @param {string} cidPath
-   * @param {object} [opts={}]
-   * @param {('car'|'raw')} [opts.format]
-   * @param {boolean} [opts.raceNodes]
-   * @param {string} [opts.customerFallbackURL]
-   * @param {number} [opts.connectTimeout=5000]
-   * @param {number} [opts.downloadTimeout=0]
+   * @param {FetchOptions} [opts={}]
    * @returns {Promise<AsyncIterable<Uint8Array>>}
    */
   async * fetchContentWithFallback (cidPath, opts = {}) {
@@ -341,11 +329,7 @@ export class Saturn {
   /**
    *
    * @param {string} cidPath
-   * @param {object} [opts={}]
-   * @param {('car'|'raw')} [opts.format]
-   * @param {boolean} [opts.raceNodes]
-   * @param {number} [opts.connectTimeout=5000]
-   * @param {number} [opts.downloadTimeout=0]
+   * @param {FetchOptions} [opts={}]
    * @returns {Promise<AsyncIterable<Uint8Array>>}
    */
   async * fetchContent (cidPath, opts = {}) {
@@ -386,11 +370,7 @@ export class Saturn {
   /**
    *
    * @param {string} cidPath
-   * @param {object} [opts={}]
-   * @param {('car'|'raw')} [opts.format]
-   * @param {boolean} [opts.raceNodes]
-   * @param {number} [opts.connectTimeout=5000]
-   * @param {number} [opts.downloadTimeout=0]
+   * @param {FetchOptions} [opts={}]
    * @returns {Promise<Uint8Array>}
    */
   async fetchContentBuffer (cidPath, opts = {}) {
