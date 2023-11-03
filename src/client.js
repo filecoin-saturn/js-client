@@ -32,6 +32,7 @@ export class Saturn {
    * @param {string} [config.customerFallbackURL]
    * @param {number} [config.fallbackLimit]
    * @param {boolean} [config.experimental]
+   * @param {string}  [config.format]
    * @param {import('./storage/index.js').Storage} [config.storage]
    */
   constructor (config = {}) {
@@ -41,6 +42,7 @@ export class Saturn {
       logURL: 'https://twb3qukm2i654i3tnvx36char40aymqq.lambda-url.us-west-2.on.aws/',
       orchURL: 'https://orchestrator.strn.pl/nodes?maxNodes=100',
       authURL: 'https://su4hesnyinnwvtk3h2rkauh5ja0qrisq.lambda-url.us-west-2.on.aws/',
+      format: 'car',
       fallbackLimit: 5,
       connectTimeout: 5_000,
       downloadTimeout: 0
@@ -68,7 +70,7 @@ export class Saturn {
    * @returns {Promise<object>}
    */
   async fetchCIDWithRace (cidPath, opts = {}) {
-    const options = Object.assign({}, this.config, { format: 'car' }, opts)
+    const options = Object.assign({}, this.config, opts)
     if (!opts.originFallback) {
       const [cid] = (cidPath ?? '').split('/')
       CID.parse(cid)
@@ -159,7 +161,7 @@ export class Saturn {
    * @returns {Promise<object>}
    */
   async fetchCID (cidPath, opts = {}) {
-    const options = Object.assign({}, this.config, { format: 'car' }, opts)
+    const options = Object.assign({}, this.config, opts)
     if (!opts.originFallback) {
       const [cid] = (cidPath ?? '').split('/')
       CID.parse(cid)
@@ -264,7 +266,7 @@ export class Saturn {
         })
       }
       let byteCount = 0
-      const fetchOptions = Object.assign(opts, { format: 'car' }, options)
+      const fetchOptions = Object.assign(opts, options)
       const byteChunks = await this.fetchContent(cidPath, fetchOptions)
       for await (const chunk of byteChunks) {
         // avoid sending duplicate chunks
@@ -347,6 +349,7 @@ export class Saturn {
    */
   async * fetchContent (cidPath, opts = {}) {
     let res, controller, log
+    opts = Object.assign(this.config, opts)
 
     if (opts.raceNodes) {
       ({ res, controller, log } = await this.fetchCIDWithRace(cidPath, opts))
@@ -365,10 +368,10 @@ export class Saturn {
 
     try {
       const itr = metricsIterable(asAsyncIterable(res.body))
-      if (opts.format === 'car') {
-        yield * extractVerifiedContent(cidPath, itr)
-      } else {
+      if (!opts.format) {
         yield * itr
+      } else {
+        yield * extractVerifiedContent(cidPath, itr)
       }
     } catch (err) {
       log.error = err.message
