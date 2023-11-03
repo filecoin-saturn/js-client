@@ -349,7 +349,7 @@ export class Saturn {
    */
   async * fetchContent (cidPath, opts = {}) {
     let res, controller, log
-    opts = Object.assign(this.config, opts)
+    opts = Object.assign({}, this.config, opts)
 
     if (opts.raceNodes) {
       ({ res, controller, log } = await this.fetchCIDWithRace(cidPath, opts))
