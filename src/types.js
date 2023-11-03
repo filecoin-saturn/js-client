@@ -23,6 +23,7 @@
  * @property {string} [customerFallbackURL] - Customer Origin that is a fallback.
  * @property {number} [connectTimeout=5000] - Connection timeout in milliseconds.
  * @property {number} [downloadTimeout=0] - Download timeout in milliseconds.
+ * @property {AbortController} [controller]
  */
 
 export {}

@@ -242,6 +242,9 @@ export class Saturn {
    * @returns {Promise<AsyncIterable<Uint8Array>>}
    */
   async * fetchContentWithFallback (cidPath, opts = {}) {
+    const upstreamController = opts.controller
+    delete opts.controller
+
     let lastError = null
     let skipNodes = false
     // we use this to checkpoint at which chunk a request failed.
@@ -253,6 +256,13 @@ export class Saturn {
     }
 
     const fetchContent = async function * (options) {
+      const controller = new AbortController()
+      opts.controller = controller
+      if (upstreamController) {
+        upstreamController.signal.addEventListener('abort', () => {
+          controller.abort()
+        })
+      }
       let byteCount = 0
       const fetchOptions = Object.assign(opts, { format: 'car' }, options)
       const byteChunks = await this.fetchContent(cidPath, fetchOptions)
@@ -293,7 +303,7 @@ export class Saturn {
     let fallbackCount = 0
     const nodes = this.nodes
     for (let i = 0; i < nodes.length; i++) {
-      if (fallbackCount > this.config.fallbackLimit || skipNodes) {
+      if (fallbackCount > this.config.fallbackLimit || skipNodes || upstreamController?.signal.aborted) {
         break
       }
       if (opts.raceNodes) {
