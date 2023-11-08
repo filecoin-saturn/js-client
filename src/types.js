@@ -21,6 +21,7 @@
  * @property {boolean} [originFallback] - Is this a fallback to the customer origin
  * @property {boolean} [raceNodes] - Does the fetch race multiple nodes on requests.
  * @property {string} [customerFallbackURL] - Customer Origin that is a fallback.
+ * @property {string} [jwt] - JWT for L1 request.
  * @property {number} [connectTimeout=5000] - Connection timeout in milliseconds.
  * @property {number} [downloadTimeout=0] - Download timeout in milliseconds.
  * @property {AbortController} [controller]
