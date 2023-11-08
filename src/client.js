@@ -1,6 +1,7 @@
 // @ts-check
 
 import { CID } from 'multiformats'
+import pLimit from 'p-limit'
 
 import { extractVerifiedContent } from './utils/car.js'
 import { asAsyncIterable, asyncIteratorToBuffer } from './utils/itr.js'
@@ -57,6 +58,7 @@ export class Saturn {
     }
     this.storage = this.config.storage || memoryStorage()
     this.loadNodesPromise = this.config.experimental ? this._loadNodes(this.config) : null
+    this.authLimiter = pLimit(1)
   }
 
   /**
@@ -72,7 +74,7 @@ export class Saturn {
       CID.parse(cid)
 
       if (options.clientKey) {
-        options.jwt = await getJWT(options, this.storage)
+        options.jwt = await this.authLimiter(() => getJWT(options, this.storage))
       }
     }
 
@@ -166,7 +168,7 @@ export class Saturn {
       CID.parse(cid)
 
       if (options.clientKey) {
-        options.jwt = await getJWT(options, this.storage)
+        options.jwt = await this.authLimiter(() => getJWT(options, this.storage))
       }
     }
 
