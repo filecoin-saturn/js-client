@@ -48,10 +48,6 @@ export class Saturn {
       downloadTimeout: 0
     }, config)
 
-    if (!this.config.clientKey) {
-      throw new Error('clientKey is required')
-    }
-
     this.logs = []
     this.nodes = []
     this.reportingLogs = process?.env?.NODE_ENV !== 'development'
@@ -74,15 +70,18 @@ export class Saturn {
     if (!opts.originFallback) {
       const [cid] = (cidPath ?? '').split('/')
       CID.parse(cid)
-      const jwt = await getJWT(options, this.storage)
-      options.jwt = jwt
+
+      if (options.clientKey) {
+        options.jwt = await getJWT(options, this.storage)
+      }
     }
 
-    if (!isBrowserContext) {
-      options.headers = {
-        ...(options.headers || {}),
-        Authorization: 'Bearer ' + options.jwt
-      }
+    options.headers = {
+      ...(options.headers || {})
+    }
+
+    if (!isBrowserContext && options.jwt) {
+      options.headers.Authorization = 'Bearer ' + options.jwt
     }
 
     let nodes = options.nodes
@@ -165,8 +164,10 @@ export class Saturn {
     if (!opts.originFallback) {
       const [cid] = (cidPath ?? '').split('/')
       CID.parse(cid)
-      const jwt = await getJWT(this.config, this.storage)
-      options.jwt = jwt
+
+      if (options.clientKey) {
+        options.jwt = await getJWT(options, this.storage)
+      }
     }
 
     const node = options.nodes && options.nodes[0]
@@ -184,12 +185,14 @@ export class Saturn {
       controller.abort()
     }, options.connectTimeout)
 
-    if (!isBrowserContext) {
-      options.headers = {
-        ...(options.headers || {}),
-        Authorization: 'Bearer ' + options.jwt
-      }
+    options.headers = {
+      ...(options.headers || {})
     }
+
+    if (!isBrowserContext && options.jwt) {
+      options.headers.Authorization = 'Bearer ' + options.jwt
+    }
+
     let res
     try {
       res = await fetch(parseUrl(url), { signal: controller.signal, ...options })
@@ -417,7 +420,7 @@ export class Saturn {
       url.searchParams.set('dag-scope', 'entity')
     }
 
-    if (isBrowserContext) {
+    if (isBrowserContext && opts.jwt) {
       url.searchParams.set('jwt', opts.jwt)
     }
 
