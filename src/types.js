@@ -25,7 +25,7 @@
  * @property {number} [connectTimeout=5000] - Connection timeout in milliseconds.
  * @property {number} [downloadTimeout=0] - Download timeout in milliseconds.
  * @property {AbortController} [controller] - Abort controller
- * @property {boolean} [firstHitDNS] - Is the first request always to DNS
+ * @property {boolean} [firstHitDNS] - First request hit is always to CDN origin.
  */
 
 export {}
