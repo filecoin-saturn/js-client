@@ -311,9 +311,10 @@ export class Saturn {
       }
     }
 
-    let nodes = this.nodes.slice().map((node) => node.url)
+    let nodes = this.nodes
     if (this.hashring) {
-      nodes = this.hashring.range(cidPath, this.opts.fallbackLimit + 1)
+      const hashringNodes = this.hashring.range(cidPath, this.config.fallbackLimit + 1)
+      nodes = nodes.filter((node) => hashringNodes.includes(node.url))
     }
 
     let fallbackCount = 0
@@ -545,14 +546,13 @@ export class Saturn {
     performance.setResourceTimingBufferSize(newSize)
   }
 
-  _setNodesHashRing (nodes) {
-    const servers = nodes.slice(0, this.opts.hashRingSize).reduce((accumulator, node) => {
+  createHashring (nodes) {
+    const servers = nodes.slice(0, this.config.hashRingSize).reduce((accumulator, node) => {
       accumulator[node.url] = { weight: node.weight }
       return accumulator
     }, {})
 
     const hashring = new HashRing(servers, 'md5', { 'max cache size': Saturn.hashRingCacheSize })
-    this.hashring = hashring
     return hashring
   }
 
@@ -626,13 +626,13 @@ export class Saturn {
     // if storage returns first, update based on cached storage.
     if (nodes === await cacheNodesListPromise) {
       this.nodes = nodes
-      nodes && this._setNodesHashRing(nodes)
+      this.hashring = nodes && this.createHashring(nodes)
     }
     // we always want to update from the orchestrator regardless.
     nodes = await orchNodesListPromise
     nodes = this._sortNodes(nodes)
     this.nodes = nodes
     this.storage.set(Saturn.nodesListKey, nodes)
-    this._setNodesHashRing(nodes)
+    this.hashring = this.createHashring(nodes)
   }
 }

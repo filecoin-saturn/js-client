@@ -375,6 +375,7 @@ describe('Client Fallback', () => {
     mock.reset()
     server.close()
   })
+
   test('Handles fallback with chunk overlap correctly', async () => {
     const numNodes = 3
     const handlers = [
