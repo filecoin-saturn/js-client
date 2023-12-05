@@ -183,6 +183,45 @@ describe('Client Fallback', () => {
     mock.reset()
   })
 
+  test('Requests to the same cid go to the same node', async (t) => {
+    const handlers = [
+      mockOrchHandler(5, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN),
+      mockJWT(TEST_AUTH),
+      mockOriginHandler(TEST_ORIGIN_DOMAIN, 0, true),
+      ...mockNodesHandlers(5, TEST_ORIGIN_DOMAIN)
+    ]
+    const server = getMockServer(handlers)
+    server.listen(MSW_SERVER_OPTS)
+
+    const expectedNodes = generateNodes(3, TEST_ORIGIN_DOMAIN)
+
+    // Mocking storage object
+    const mockStorage = {
+      get: async (key) => expectedNodes,
+      set: async (key, value) => { return null }
+    }
+    t.mock.method(mockStorage, 'get')
+    t.mock.method(mockStorage, 'set')
+
+    const saturn = new Saturn({ ...options })
+
+    await saturn.loadNodesPromise
+
+    const hashring = saturn.hashring
+
+    const cid = 'bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4'
+    const initialNode = hashring.get(cid)
+    const testRequestCount = 5
+
+    for (let i = 0; i < testRequestCount; i++) {
+      const node = hashring.get(cid)
+      assert.strictEqual(node, initialNode)
+    }
+
+    server.close()
+    mock.reset()
+  })
+
   test('Content Fallback with race fetches from consecutive nodes on failure', async (t) => {
     const handlers = [
       mockOrchHandler(5, TEST_DEFAULT_ORCH, TEST_ORIGIN_DOMAIN),
