@@ -19,7 +19,8 @@ export function isErrorUnavoidable (error) {
     /file does not exist/,
     /Cannot read properties of undefined \(reading '([^']+)'\)/,
     /([a-zA-Z_.]+) is undefined/,
-    /undefined is not an object \(evaluating '([^']+)'\)/
+    /undefined is not an object \(evaluating '([^']+)'\)/,
+    /all retrievals failed/
   ]
 
   for (const pattern of errorPatterns) {

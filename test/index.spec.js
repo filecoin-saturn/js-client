@@ -17,28 +17,28 @@ describe('Saturn client', () => {
     it('should work with custom client ID', () => {
       const clientId = randomUUID()
       const saturn = new Saturn({ clientId, clientKey })
-      assert.strictEqual(saturn.opts.clientId, clientId)
+      assert.strictEqual(saturn.config.clientId, clientId)
     })
 
     it('should work with custom CDN URL', () => {
       const cdnURL = 'custom.com'
       const saturn = new Saturn({ cdnURL, clientKey })
-      assert.strictEqual(saturn.opts.cdnURL, cdnURL)
+      assert.strictEqual(saturn.config.cdnURL, cdnURL)
     })
 
     it('should work with custom connect timeout', () => {
       const saturn = new Saturn({ connectTimeout: 1234, clientKey })
-      assert.strictEqual(saturn.opts.connectTimeout, 1234)
+      assert.strictEqual(saturn.config.connectTimeout, 1234)
     })
 
     it('should work with custom download timeout', () => {
       const saturn = new Saturn({ downloadTimeout: 3456, clientKey })
-      assert.strictEqual(saturn.opts.downloadTimeout, 3456)
+      assert.strictEqual(saturn.config.downloadTimeout, 3456)
     })
   })
 
   describe('Fetch a CID', () => {
-    const client = new Saturn({ clientKey })
+    const client = new Saturn({ clientKey, authURL: TEST_AUTH })
     const handlers = [
       mockJWT(TEST_AUTH)
     ]
@@ -86,7 +86,7 @@ describe('Saturn client', () => {
       mockJWT(TEST_AUTH)
     ]
     const server = getMockServer(handlers)
-    const client = new Saturn({ clientKey, clientId: 'tesd' })
+    const client = new Saturn({ clientKey, clientId: 'tesd', authURL: TEST_AUTH })
     before(() => {
       server.listen(MSW_SERVER_OPTS)
     })

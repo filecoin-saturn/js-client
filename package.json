@@ -1,6 +1,6 @@
 {
   "name": "@filecoin-saturn/js-client",
-  "version": "0.3.3",
+  "version": "0.3.6",
   "description": "Filecoin Saturn Client",
   "homepage": "https://github.com/filecoin-saturn/js-client",
   "main": "src/index.js",
@@ -32,7 +32,8 @@
     "idb": "^7.1.1",
     "ipfs-unixfs-exporter": "https://gitpkg.now.sh/filecoin-saturn/js-ipfs-unixfs/packages/ipfs-unixfs-exporter?build",
     "msw": "^1.3.2",
-    "multiformats": "^12.1.1"
+    "multiformats": "^12.1.1",
+    "p-limit": "^5.0.0"
   },
   "devDependencies": {
     "eslint": "^8.24.0",
