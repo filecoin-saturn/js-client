@@ -308,7 +308,13 @@ export class Saturn {
     }
 
     let fallbackCount = 0
-    const nodes = this.nodes
+    let nodes = this.nodes
+    if (opts.firstHitDNS) {
+      nodes = [
+        { url: this.config.cdnURL },
+        ...nodes
+      ]
+    }
     for (let i = 0; i < nodes.length; i++) {
       if (fallbackCount > this.config.fallbackLimit || skipNodes || upstreamController?.signal.aborted) {
         break
