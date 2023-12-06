@@ -24,7 +24,8 @@
  * @property {string} [jwt] - JWT for L1 request.
  * @property {number} [connectTimeout=5000] - Connection timeout in milliseconds.
  * @property {number} [downloadTimeout=0] - Download timeout in milliseconds.
- * @property {AbortController} [controller]
+ * @property {AbortController} [controller] - Abort controller
+ * @property {boolean} [firstHitDNS] - First request hit is always to CDN origin.
  */
 
 export {}

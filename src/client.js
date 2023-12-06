@@ -317,6 +317,13 @@ export class Saturn {
       nodes = nodes.filter((node) => hashringNodes.includes(node.url))
     }
 
+    if (opts.firstHitDNS) {
+      nodes = [
+        { url: this.config.cdnURL },
+        ...nodes
+      ]
+    }
+
     let fallbackCount = 0
     for (let i = 0; i < nodes.length; i++) {
       if (fallbackCount > this.config.fallbackLimit || skipNodes || upstreamController?.signal.aborted) {
