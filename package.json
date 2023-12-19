@@ -1,6 +1,6 @@
 {
   "name": "@filecoin-saturn/js-client",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "Filecoin Saturn Client",
   "homepage": "https://github.com/filecoin-saturn/js-client",
   "main": "src/index.js",
