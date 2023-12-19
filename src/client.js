@@ -10,6 +10,7 @@ import { memoryStorage } from './storage/index.js'
 import { getJWT } from './utils/jwt.js'
 import { parseUrl, addHttpPrefix } from './utils/url.js'
 import { isBrowserContext } from './utils/runtime.js'
+import HashRing from 'hashring'
 import { isErrorUnavoidable } from './utils/errors.js'
 
 const MAX_NODE_WEIGHT = 100
@@ -21,6 +22,7 @@ const MAX_NODE_WEIGHT = 100
 export class Saturn {
   static nodesListKey = 'saturn-nodes'
   static defaultRaceCount = 3
+  static hashRingCacheSize = 10_000
   /**
    *
    * @param {object} [config={}]
@@ -46,11 +48,13 @@ export class Saturn {
       format: 'car',
       fallbackLimit: 5,
       connectTimeout: 5_000,
+      hashRingSize: 25,
       downloadTimeout: 0
     }, config)
 
     this.logs = []
     this.nodes = []
+    this.hashring = null
     this.reportingLogs = process?.env?.NODE_ENV !== 'development'
     this.hasPerformanceAPI = isBrowserContext && self?.performance
     if (this.reportingLogs && this.hasPerformanceAPI) {
@@ -307,14 +311,20 @@ export class Saturn {
       }
     }
 
-    let fallbackCount = 0
     let nodes = this.nodes
+    if (this.hashring) {
+      const hashringNodes = this.hashring.range(cidPath, this.config.fallbackLimit + 1)
+      nodes = nodes.filter((node) => hashringNodes.includes(node.url))
+    }
+
     if (opts.firstHitDNS) {
       nodes = [
         { url: this.config.cdnURL },
         ...nodes
       ]
     }
+
+    let fallbackCount = 0
     for (let i = 0; i < nodes.length; i++) {
       if (fallbackCount > this.config.fallbackLimit || skipNodes || upstreamController?.signal.aborted) {
         break
@@ -543,6 +553,16 @@ export class Saturn {
     performance.setResourceTimingBufferSize(newSize)
   }
 
+  createHashring (nodes) {
+    const servers = nodes.slice(0, this.config.hashRingSize).reduce((accumulator, node) => {
+      accumulator[node.url] = { weight: node.weight }
+      return accumulator
+    }, {})
+
+    const hashring = new HashRing(servers, 'md5', { 'max cache size': Saturn.hashRingCacheSize })
+    return hashring
+  }
+
   _clearPerformanceBuffer () {
     if (this.hasPerformanceAPI) {
       performance.clearResourceTimings()
@@ -613,11 +633,13 @@ export class Saturn {
     // if storage returns first, update based on cached storage.
     if (nodes === await cacheNodesListPromise) {
       this.nodes = nodes
+      this.hashring = nodes && this.createHashring(nodes)
     }
     // we always want to update from the orchestrator regardless.
     nodes = await orchNodesListPromise
     nodes = this._sortNodes(nodes)
     this.nodes = nodes
     this.storage.set(Saturn.nodesListKey, nodes)
+    this.hashring = this.createHashring(nodes)
   }
 }
