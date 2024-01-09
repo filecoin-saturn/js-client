@@ -18,6 +18,7 @@
  * @typedef {object} FetchOptions
  * @property {Node[]} [nodes] - An array of nodes.
  * @property {('car'|'raw')} [format] - The format of the fetched content.
+ * 
  * @property {boolean} [originFallback] - Is this a fallback to the customer origin
  * @property {boolean} [raceNodes] - Does the fetch race multiple nodes on requests.
  * @property {string} [customerFallbackURL] - Customer Origin that is a fallback.
@@ -26,6 +27,15 @@
  * @property {number} [downloadTimeout=0] - Download timeout in milliseconds.
  * @property {AbortController} [controller] - Abort controller
  * @property {boolean} [firstHitDNS] - First request hit is always to CDN origin.
+ * @property {ContentRange} [range] - range to fetch, compatible with entity bytes parameter
+ */
+
+/**
+ * Options for a range request
+ *
+ * @typedef {object} ContentRange
+ * @property {number} [rangeStart]
+ * @property {number} [rangeEnd]
  */
 
 export {}

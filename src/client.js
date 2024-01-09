@@ -392,7 +392,7 @@ export class Saturn {
       if (!opts.format) {
         yield * itr
       } else {
-        yield * extractVerifiedContent(cidPath, itr)
+        yield * extractVerifiedContent(cidPath, itr, opts.range || {})
       }
     } catch (err) {
       log.error = err.message
@@ -422,6 +422,7 @@ export class Saturn {
    * @param {string} [opts.format]
    * @param {string} [opts.originFallback]
    * @param {object} [opts.jwt]
+   * @param {import('./types.js').ContentRange} [opts.range]
    * @returns {URL}
    */
   createRequestURL (cidPath, opts = {}) {
@@ -442,6 +443,11 @@ export class Saturn {
       url.searchParams.set('jwt', opts.jwt)
     }
 
+    if (typeof opts.range === 'object' && (opts.range.rangeStart || opts.range.rangeEnd)) {
+      const rangeStart = opts.range.rangeStart?.toString() || '0'
+      const rangeEnd = opts.range.rangeEnd?.toString() || '*'
+      url.searchParams.set('entity-bytes', rangeStart + ':' + rangeEnd)
+    }
     return url
   }
 

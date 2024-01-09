@@ -2,7 +2,7 @@ import { CarBlockIterator } from '@ipld/car'
 import * as dagCbor from '@ipld/dag-cbor'
 import * as dagPb from '@ipld/dag-pb'
 import * as dagJson from '@ipld/dag-json'
-import { exporter } from 'ipfs-unixfs-exporter'
+import * as unixfs from 'ipfs-unixfs-exporter'
 import { bytes } from 'multiformats'
 import * as raw from 'multiformats/codecs/raw'
 import * as json from 'multiformats/codecs/json'
@@ -89,12 +89,45 @@ export async function verifyBlock (cid, bytes) {
  *
  * @param {string} cidPath
  * @param {ReadableStream|AsyncIterable} carStream
+ * @param {import('../types.js').ContentRange} options
  */
-export async function * extractVerifiedContent (cidPath, carStream) {
+export async function * extractVerifiedContent (cidPath, carStream, options = {}) {
   const getter = await CarBlockGetter.fromStream(carStream)
-  const node = await exporter(cidPath, getter)
+  const node = await unixfs.exporter(cidPath, getter)
 
-  for await (const chunk of node.content()) {
+  for await (const chunk of contentGenerator(node, options)) {
     yield chunk
   }
+}
+
+/**
+ * 
+ * @param {unixfs.UnixFSEntry} node
+ * @param {import('../types.js').ContentRange} options
+ */
+function contentGenerator(node, options = {}) {
+
+  let rangeStart = options.rangeStart ?? 0
+  if (rangeStart < 0) {
+    rangeStart = rangeStart + Number(node.size)
+    if (rangeStart < 0) {
+      rangeStart = 0
+    }
+
+  }
+  if (options.rangeEnd === null || options.rangeEnd === undefined) {
+    return node.content({offset: rangeStart})
+  }
+
+    let rangeEnd = options.rangeEnd
+    if (rangeEnd < 0) {
+      rangeEnd = rangeEnd + Number(node.size)
+    } else {
+      rangeEnd = rangeEnd+1
+    }
+    const toRead =  rangeEnd - rangeStart
+    if (toRead < 0) {
+      throw new Error("range end must be greater than range start")
+    }
+    return node.content({offset: rangeStart, length: toRead})
 }
