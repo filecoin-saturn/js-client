@@ -46,19 +46,43 @@ export function generateNodes (count, originDomain) {
 /**
  * Generates a mock handler to mimick Saturn's orchestrator /nodes endpoint.
  *
- * @param {string} cdnURL - orchestratorUrl
+ * @param {string} originUrl - originUrl
  * @param {number} delay - request delay in ms
  * @param {boolean} error
  * @returns {RestHandler<any>}
  */
-export function mockSaturnOriginHandler (cdnURL, delay = 0, error = false) {
-  cdnURL = addHttpPrefix(cdnURL)
-  cdnURL = `${cdnURL}/ipfs/:cid`
-  return rest.get(cdnURL, (req, res, ctx) => {
+export function mockOriginHandler (originUrl, delay = 0, error = false) {
+  originUrl = addHttpPrefix(originUrl)
+  originUrl = `${originUrl}/ipfs/:cid`
+  return rest.get(originUrl, (req, res, ctx) => {
     if (error) {
       throw Error('Simulated Error')
     }
     const filepath = getFixturePath('hello.car')
+    const fileContents = fs.readFileSync(filepath)
+    return res(
+      ctx.delay(delay),
+      ctx.status(HTTP_STATUS_OK),
+      ctx.body(fileContents)
+    )
+  })
+}
+
+/**
+ * Generates a mock handler to mimick an origin that serves flat files.
+ *
+ * @param {string} originUrl - originUrl
+ * @param {number} delay - request delay in ms
+ * @param {boolean} error
+ * @returns {RestHandler<any>}
+ */
+export function mockFlatFileOriginHandler (originUrl, delay = 0, error = false) {
+  originUrl = addHttpPrefix(originUrl)
+  return rest.get(originUrl, (req, res, ctx) => {
+    if (error) {
+      throw Error('Simulated Error')
+    }
+    const filepath = getFixturePath('hello.json')
     const fileContents = fs.readFileSync(filepath)
     return res(
       ctx.delay(delay),

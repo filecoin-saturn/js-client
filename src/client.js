@@ -1,6 +1,7 @@
 // @ts-check
 
 import { CID } from 'multiformats'
+import pLimit from 'p-limit'
 
 import { extractVerifiedContent } from './utils/car.js'
 import { asAsyncIterable, asyncIteratorToBuffer } from './utils/itr.js'
@@ -9,85 +10,89 @@ import { memoryStorage } from './storage/index.js'
 import { getJWT } from './utils/jwt.js'
 import { parseUrl, addHttpPrefix } from './utils/url.js'
 import { isBrowserContext } from './utils/runtime.js'
+import HashRing from 'hashring'
 import { isErrorUnavoidable } from './utils/errors.js'
 
 const MAX_NODE_WEIGHT = 100
 /**
  * @typedef {import('./types.js').Node} Node
+ * @typedef {import('./types.js').FetchOptions} FetchOptions
  */
 
 export class Saturn {
   static nodesListKey = 'saturn-nodes'
   static defaultRaceCount = 3
+  static hashRingCacheSize = 10_000
   /**
    *
-   * @param {object} [opts={}]
-   * @param {string} [opts.clientKey]
-   * @param {string} [opts.clientId=randomUUID()]
-   * @param {string} [opts.cdnURL=saturn.ms]
-   * @param {number} [opts.connectTimeout=5000]
-   * @param {number} [opts.downloadTimeout=0]
-   * @param {string} [opts.orchURL]
-   * @param {number} [opts.fallbackLimit]
-   * @param {boolean} [opts.experimental]
-   * @param {import('./storage/index.js').Storage} [opts.storage]
+   * @param {object} [config={}]
+   * @param {string} [config.clientKey]
+   * @param {string} [config.clientId=randomUUID()]
+   * @param {string} [config.cdnURL=saturn.ms]
+   * @param {number} [config.connectTimeout=5000]
+   * @param {number} [config.downloadTimeout=0]
+   * @param {string} [config.orchURL]
+   * @param {string} [config.customerFallbackURL]
+   * @param {number} [config.fallbackLimit]
+   * @param {boolean} [config.experimental]
+   * @param {string}  [config.format]
+   * @param {import('./storage/index.js').Storage} [config.storage]
    */
-  constructor (opts = {}) {
-    this.opts = Object.assign({}, {
+  constructor (config = {}) {
+    this.config = Object.assign({}, {
       clientId: randomUUID(),
       cdnURL: 'l1s.saturn.ms',
       logURL: 'https://25y6y3tobkpa3thvn5wvu6kgsa0wzhdk.lambda-url.us-west-2.on.aws/',
       orchURL: 'https://orchestrator.strn.pl/nodes?maxNodes=100',
       authURL: 'https://vitpjzguzvhywfjfg4argkmpvm0dksap.lambda-url.us-west-2.on.aws/',
+      format: 'car',
       fallbackLimit: 5,
       connectTimeout: 5_000,
+      hashRingSize: 25,
       downloadTimeout: 0
-    }, opts)
-
-    if (!this.opts.clientKey) {
-      throw new Error('clientKey is required')
-    }
+    }, config)
 
     this.logs = []
     this.nodes = []
+    this.hashring = null
     this.reportingLogs = process?.env?.NODE_ENV !== 'development'
     this.hasPerformanceAPI = isBrowserContext && self?.performance
     if (this.reportingLogs && this.hasPerformanceAPI) {
       this._monitorPerformanceBuffer()
     }
-    this.storage = this.opts.storage || memoryStorage()
-    this.loadNodesPromise = this.opts.experimental ? this._loadNodes(this.opts) : null
+    this.storage = this.config.storage || memoryStorage()
+    this.loadNodesPromise = this.config.experimental ? this._loadNodes(this.config) : null
+    this.authLimiter = pLimit(1)
   }
 
   /**
    *
    * @param {string} cidPath
-   * @param {object} [opts={}]
-   * @param {Node[]} [opts.nodes]
-   * @param {Node} [opts.node]
-   * @param {('car'|'raw')} [opts.format]
-   * @param {number} [opts.connectTimeout=5000]
-   * @param {number} [opts.downloadTimeout=0]
+   * @param {FetchOptions} [opts={}]
    * @returns {Promise<object>}
    */
   async fetchCIDWithRace (cidPath, opts = {}) {
-    const [cid] = (cidPath ?? '').split('/')
-    CID.parse(cid)
+    const options = Object.assign({}, this.config, opts)
+    if (!opts.originFallback) {
+      const [cid] = (cidPath ?? '').split('/')
+      CID.parse(cid)
 
-    const jwt = await getJWT(this.opts, this.storage)
-
-    const options = Object.assign({}, this.opts, { format: 'car', jwt }, opts)
-
-    if (!isBrowserContext) {
-      options.headers = {
-        ...(options.headers || {}),
-        Authorization: 'Bearer ' + options.jwt
+      if (options.clientKey) {
+        options.jwt = await this.authLimiter(() => getJWT(options, this.storage))
       }
+    }
+
+    options.headers = {
+      ...(options.headers || {})
+    }
+
+    if (!isBrowserContext && options.jwt) {
+      options.headers.Authorization = 'Bearer ' + options.jwt
     }
 
     let nodes = options.nodes
     if (!nodes || nodes.length === 0) {
-      const replacementNode = options.node ?? { url: this.opts.cdnURL }
+      const replacementNode = { url: options.cdnURL }
       nodes = [replacementNode]
     }
     const controllers = []
@@ -157,22 +162,22 @@ export class Saturn {
   /**
    *
    * @param {string} cidPath
-   * @param {object} [opts={}]
-   * @param {('car'|'raw')} [opts.format]
-   * @param {Node} [opts.node]
-   * @param {number} [opts.connectTimeout=5000]
-   * @param {number} [opts.downloadTimeout=0]
+   * @param {FetchOptions} [opts={}]
    * @returns {Promise<object>}
    */
   async fetchCID (cidPath, opts = {}) {
-    const [cid] = (cidPath ?? '').split('/')
-    CID.parse(cid)
+    const options = Object.assign({}, this.config, opts)
+    if (!opts.originFallback) {
+      const [cid] = (cidPath ?? '').split('/')
+      CID.parse(cid)
 
-    const jwt = await getJWT(this.opts, this.storage)
+      if (options.clientKey) {
+        options.jwt = await this.authLimiter(() => getJWT(options, this.storage))
+      }
+    }
 
-    const options = Object.assign({}, this.opts, { format: 'car', jwt }, opts)
-    const node = options.node
-    const origin = node?.url ?? this.opts.cdnURL
+    const node = options.nodes && options.nodes[0]
+    const origin = node?.url ?? this.config.cdnURL
     const url = this.createRequestURL(cidPath, { ...options, url: origin })
 
     let log = {
@@ -186,12 +191,14 @@ export class Saturn {
       controller.abort()
     }, options.connectTimeout)
 
-    if (!isBrowserContext) {
-      options.headers = {
-        ...(options.headers || {}),
-        Authorization: 'Bearer ' + options.jwt
-      }
+    options.headers = {
+      ...(options.headers || {})
     }
+
+    if (!isBrowserContext && options.jwt) {
+      options.headers.Authorization = 'Bearer ' + options.jwt
+    }
+
     let res
     try {
       res = await fetch(parseUrl(url), { signal: controller.signal, ...options })
@@ -242,20 +249,15 @@ export class Saturn {
   /**
    *
    * @param {string} cidPath
-   * @param {object} [opts={}]
-   * @param {('car'|'raw')} [opts.format]
-   * @param {boolean} [opts.raceNodes]
-   * @param {string} [opts.url]
-   * @param {number} [opts.connectTimeout=5000]
-   * @param {number} [opts.downloadTimeout=0]
-   * @param {AbortController} [opts.controller]
+   * @param {FetchOptions} [opts={}]
    * @returns {Promise<AsyncIterable<Uint8Array>>}
    */
   async * fetchContentWithFallback (cidPath, opts = {}) {
-    const upstreamController = opts.controller;
-    delete opts.controller;
+    const upstreamController = opts.controller
+    delete opts.controller
 
     let lastError = null
+    let skipNodes = false
     // we use this to checkpoint at which chunk a request failed.
     // this is temporary until range requests are supported.
     let byteCountCheckpoint = 0
@@ -264,16 +266,17 @@ export class Saturn {
       throw new Error(`All attempts to fetch content have failed. Last error: ${lastError.message}`)
     }
 
-    const fetchContent = async function * () {
-      const controller = new AbortController();
-      opts.controller = controller;
+    const fetchContent = async function * (options) {
+      const controller = new AbortController()
+      opts.controller = controller
       if (upstreamController) {
         upstreamController.signal.addEventListener('abort', () => {
-          controller.abort();
-        });
+          controller.abort()
+        })
       }
       let byteCount = 0
-      const byteChunks = await this.fetchContent(cidPath, opts)
+      const fetchOptions = Object.assign(opts, options)
+      const byteChunks = await this.fetchContent(cidPath, fetchOptions)
       for await (const chunk of byteChunks) {
         // avoid sending duplicate chunks
         if (byteCount < byteCountCheckpoint) {
@@ -291,33 +294,46 @@ export class Saturn {
       }
     }.bind(this)
 
+    // Use CDN origin if node list is not loaded
     if (this.nodes.length === 0) {
       // fetch from origin in the case that no nodes are loaded
-      opts.url = this.opts.cdnURL
+      opts.nodes = Array({ url: this.config.cdnURL })
       try {
         yield * fetchContent()
         return
       } catch (err) {
         lastError = err
         if (err.res?.status === 410 || isErrorUnavoidable(err)) {
-          throwError()
+          skipNodes = true
+        } else {
+          await this.loadNodesPromise
         }
-        await this.loadNodesPromise
       }
     }
 
+    let nodes = this.nodes
+    if (this.hashring) {
+      const hashringNodes = this.hashring.range(cidPath, this.config.fallbackLimit + 1)
+      nodes = nodes.filter((node) => hashringNodes.includes(node.url))
+    }
+
+    if (opts.firstHitDNS) {
+      nodes = [
+        { url: this.config.cdnURL },
+        ...nodes
+      ]
+    }
+
     let fallbackCount = 0
-    const nodes = this.nodes
     for (let i = 0; i < nodes.length; i++) {
-      if (fallbackCount > this.opts.fallbackLimit || upstreamController?.signal.aborted) {
-        return
+      if (fallbackCount > this.config.fallbackLimit || skipNodes || upstreamController?.signal.aborted) {
+        break
       }
       if (opts.raceNodes) {
         opts.nodes = nodes.slice(i, i + Saturn.defaultRaceCount)
       } else {
-        opts.node = nodes[i]
+        opts.nodes = Array(nodes[i])
       }
-
       try {
         yield * fetchContent()
         return
@@ -331,6 +347,17 @@ export class Saturn {
     }
 
     if (lastError) {
+      const originUrl = opts.customerFallbackURL ?? this.config.customerFallbackURL
+      // Use customer origin if cid is not retrievable by lassie.
+      if (originUrl) {
+        opts.nodes = Array({ url: originUrl })
+        try {
+          yield * fetchContent({ format: null, originFallback: true })
+          return
+        } catch (err) {
+          lastError = err
+        }
+      }
       throwError()
     }
   }
@@ -338,15 +365,12 @@ export class Saturn {
   /**
    *
    * @param {string} cidPath
-   * @param {object} [opts={}]
-   * @param {('car'|'raw')} [opts.format]
-   * @param {boolean} [opts.raceNodes]
-   * @param {number} [opts.connectTimeout=5000]
-   * @param {number} [opts.downloadTimeout=0]
+   * @param {FetchOptions} [opts={}]
    * @returns {Promise<AsyncIterable<Uint8Array>>}
    */
   async * fetchContent (cidPath, opts = {}) {
     let res, controller, log
+    opts = Object.assign({}, this.config, opts)
 
     if (opts.raceNodes) {
       ({ res, controller, log } = await this.fetchCIDWithRace(cidPath, opts))
@@ -365,7 +389,11 @@ export class Saturn {
 
     try {
       const itr = metricsIterable(asAsyncIterable(res.body))
-      yield * extractVerifiedContent(cidPath, itr)
+      if (!opts.format) {
+        yield * itr
+      } else {
+        yield * extractVerifiedContent(cidPath, itr)
+      }
     } catch (err) {
       log.error = err.message
       controller.abort()
@@ -379,11 +407,7 @@ export class Saturn {
   /**
    *
    * @param {string} cidPath
-   * @param {object} [opts={}]
-   * @param {('car'|'raw')} [opts.format]
-   * @param {boolean} [opts.raceNodes]
-   * @param {number} [opts.connectTimeout=5000]
-   * @param {number} [opts.downloadTimeout=0]
+   * @param {FetchOptions} [opts={}]
    * @returns {Promise<Uint8Array>}
    */
   async fetchContentBuffer (cidPath, opts = {}) {
@@ -395,19 +419,26 @@ export class Saturn {
    * @param {string} cidPath
    * @param {object} [opts={}]
    * @param {string} [opts.url]
+   * @param {string} [opts.format]
+   * @param {string} [opts.originFallback]
+   * @param {object} [opts.jwt]
    * @returns {URL}
    */
-  createRequestURL (cidPath, opts) {
-    let origin = opts.url ?? this.opts.cdnURL
+  createRequestURL (cidPath, opts = {}) {
+    let origin = opts.url ?? this.config.cdnURL
     origin = addHttpPrefix(origin)
+    if (opts.originFallback) {
+      return new URL(origin)
+    }
     const url = new URL(`${origin}/ipfs/${cidPath}`)
 
-    url.searchParams.set('format', opts.format)
+    if (opts.format) url.searchParams.set('format', opts.format)
+
     if (opts.format === 'car') {
       url.searchParams.set('dag-scope', 'entity')
     }
 
-    if (isBrowserContext) {
+    if (isBrowserContext && opts.jwt) {
       url.searchParams.set('jwt', opts.jwt)
     }
 
@@ -444,10 +475,10 @@ export class Saturn {
       : this.logs
 
     await fetch(
-      this.opts.logURL,
+      this.config.logURL,
       {
         method: 'POST',
-        body: JSON.stringify({ bandwidthLogs, logSender: this.opts.logSender })
+        body: JSON.stringify({ bandwidthLogs, logSender: this.config.logSender })
       }
     )
 
@@ -522,6 +553,16 @@ export class Saturn {
     performance.setResourceTimingBufferSize(newSize)
   }
 
+  createHashring (nodes) {
+    const servers = nodes.slice(0, this.config.hashRingSize).reduce((accumulator, node) => {
+      accumulator[node.url] = { weight: node.weight }
+      return accumulator
+    }, {})
+
+    const hashring = new HashRing(servers, 'md5', { 'max cache size': Saturn.hashRingCacheSize })
+    return hashring
+  }
+
   _clearPerformanceBuffer () {
     if (this.hasPerformanceAPI) {
       performance.clearResourceTimings()
@@ -569,7 +610,7 @@ export class Saturn {
 
     const url = new URL(origin)
     const controller = new AbortController()
-    const options = Object.assign({}, { method: 'GET' }, this.opts)
+    const options = Object.assign({}, { method: 'GET' }, this.config)
 
     const connectTimeout = setTimeout(() => {
       controller.abort()
@@ -592,11 +633,13 @@ export class Saturn {
     // if storage returns first, update based on cached storage.
     if (nodes === await cacheNodesListPromise) {
       this.nodes = nodes
+      this.hashring = nodes && this.createHashring(nodes)
     }
     // we always want to update from the orchestrator regardless.
     nodes = await orchNodesListPromise
     nodes = this._sortNodes(nodes)
     this.nodes = nodes
     this.storage.set(Saturn.nodesListKey, nodes)
+    this.hashring = this.createHashring(nodes)
   }
 }
