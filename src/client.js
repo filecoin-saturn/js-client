@@ -36,9 +36,9 @@ export class Saturn {
     this.opts = Object.assign({}, {
       clientId: randomUUID(),
       cdnURL: 'l1s.saturn.ms',
-      logURL: 'https://twb3qukm2i654i3tnvx36char40aymqq.lambda-url.us-west-2.on.aws/',
+      logURL: 'https://25y6y3tobkpa3thvn5wvu6kgsa0wzhdk.lambda-url.us-west-2.on.aws/',
       orchURL: 'https://orchestrator.strn.pl/nodes?maxNodes=100',
-      authURL: 'https://su4hesnyinnwvtk3h2rkauh5ja0qrisq.lambda-url.us-west-2.on.aws/',
+      authURL: 'https://vitpjzguzvhywfjfg4argkmpvm0dksap.lambda-url.us-west-2.on.aws/',
       fallbackLimit: 5,
       connectTimeout: 5_000,
       downloadTimeout: 0
