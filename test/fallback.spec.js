@@ -52,20 +52,19 @@ describe('Client Fallback', () => {
 
     const expectedNodes = generateNodes(2, TEST_ORIGIN_DOMAIN)
 
-    // Mocking storage object
     const mockStorage = {
-      get: async (key) => null,
-      set: async (key, value) => null,
-      delete: async (key) => null
+      get: async (key) => expectedNodes,
+      set: async (key, value) => { return null }
     }
+    // Mocking storage object
+    const storage = async () => mockStorage
     t.mock.method(mockStorage, 'get')
     t.mock.method(mockStorage, 'set')
 
-    const saturn = new Saturn({ storage: mockStorage, ...options })
+    const saturn = new Saturn({ storage, ...options })
 
     // Mocking options
     const mockOpts = { orchURL: TEST_DEFAULT_ORCH }
-
     await saturn._loadNodes(mockOpts)
 
     // Assert that all the storage methods were called twice.
@@ -98,7 +97,8 @@ describe('Client Fallback', () => {
     t.mock.method(mockStorage, 'get')
     t.mock.method(mockStorage, 'set')
 
-    const saturn = new Saturn({ storage: mockStorage, ...options })
+    const storage = async () => mockStorage
+    const saturn = new Saturn({ storage, ...options })
 
     // Mocking options
     const mockOpts = { orchURL: TEST_DEFAULT_ORCH }
@@ -137,7 +137,8 @@ describe('Client Fallback', () => {
     t.mock.method(mockStorage, 'get')
     t.mock.method(mockStorage, 'set')
 
-    const saturn = new Saturn({ storage: mockStorage, ...options })
+    const storage = async () => mockStorage
+    const saturn = new Saturn({ storage, ...options })
 
     const cid = saturn.fetchContentWithFallback('bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4')
 
@@ -167,10 +168,13 @@ describe('Client Fallback', () => {
       get: async (key) => expectedNodes,
       set: async (key, value) => { return null }
     }
+
     t.mock.method(mockStorage, 'get')
     t.mock.method(mockStorage, 'set')
 
-    const saturn = new Saturn({ ...options })
+    const storage = async () => mockStorage
+
+    const saturn = new Saturn({ storage, ...options })
 
     const cid = saturn.fetchContentWithFallback('bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4', { raceNodes: true })
 
@@ -203,7 +207,9 @@ describe('Client Fallback', () => {
     t.mock.method(mockStorage, 'get')
     t.mock.method(mockStorage, 'set')
 
-    const saturn = new Saturn({ ...options })
+    const storage = async () => mockStorage
+
+    const saturn = new Saturn({ storage, ...options })
 
     await saturn.loadNodesPromise
 
@@ -242,7 +248,8 @@ describe('Client Fallback', () => {
     t.mock.method(mockStorage, 'get')
     t.mock.method(mockStorage, 'set')
 
-    const saturn = new Saturn({ storage: mockStorage, ...options })
+    const storage = async () => mockStorage
+    const saturn = new Saturn({ storage, ...options })
 
     const cid = saturn.fetchContentWithFallback('bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4', { raceNodes: true })
 
@@ -336,7 +343,9 @@ describe('Client Fallback', () => {
     t.mock.method(mockStorage, 'get')
     t.mock.method(mockStorage, 'set')
 
-    const saturn = new Saturn({ storage: mockStorage, customerFallbackURL: TEST_CUSTOMER_ORIGIN, ...options })
+    const storage = async () => mockStorage
+
+    const saturn = new Saturn({ storage, customerFallbackURL: TEST_CUSTOMER_ORIGIN, ...options })
 
     const cid = saturn.fetchContentWithFallback(TEST_CUSTOMER_ORIGIN, { raceNodes: true })
 

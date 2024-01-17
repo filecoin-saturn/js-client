@@ -2,14 +2,15 @@
 
 /**
  * @function memoryStorage
- * @returns {import('./index.js').Storage}
+ * @returns {function():Promise<import('./index.js').Storage>}
  */
 export function memoryStorage () {
   const storageObject = {}
 
-  return {
+  const storage = {
     get: async (key) => storageObject[key],
     set: async (key, value) => { storageObject[key] = value },
     delete: async (key) => { delete storageObject[key] }
   }
+  return async () => storage
 }
