@@ -37,7 +37,6 @@ export class Saturn {
    * @param {boolean} [config.experimental]
    * @param {string}  [config.format]
    * @param {function():Promise<import('./index.js').Storage>} [config.storage]
-   * @param {function():Promise<import('./index.js').Storage>} [config.getStorage]
    */
   constructor (config = {}) {
     this.config = Object.assign({}, {
