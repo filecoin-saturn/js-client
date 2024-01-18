@@ -81,6 +81,18 @@ describe('Saturn client', () => {
     })
   })
 
+  describe('Create a request URL', () => {
+    const client = new Saturn({ clientKey })
+    it('should translate entity bytes params', () => {
+      assert.strictEqual(client.createRequestURL('bafy...').searchParams.get('entity-bytes'), null)
+      assert.strictEqual(client.createRequestURL('bafy...', { range: {} }).searchParams.get('entity-bytes'), null)
+      assert.strictEqual(client.createRequestURL('bafy...', { range: { rangeStart: 0 } }).searchParams.get('entity-bytes'), null)
+      assert.strictEqual(client.createRequestURL('bafy...', { range: { rangeStart: 10 } }).searchParams.get('entity-bytes'), '10:*')
+      assert.strictEqual(client.createRequestURL('bafy...', { range: { rangeStart: 10, rangeEnd: 20 } }).searchParams.get('entity-bytes'), '10:20')
+      assert.strictEqual(client.createRequestURL('bafy...', { range: { rangeEnd: 20 } }).searchParams.get('entity-bytes'), '0:20')
+    })
+  })
+
   describe('Logging', () => {
     const handlers = [
       mockJWT(TEST_AUTH)
