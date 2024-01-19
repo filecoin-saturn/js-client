@@ -79,6 +79,23 @@ describe('CAR Verification', () => {
     assert.strictEqual(actualContent, expectedContent)
   })
 
+  it('should extract content from a valid multi block CAR with a range', async () => {
+    const cidPath = 'QmStvUMCtXxEb8wRjNSUqWwqHBEDhmnEd5nHp5siV7bm1Z'
+    const filepath = getFixturePath('multi_block.car')
+    const carStream = fs.createReadStream(filepath)
+
+    const contentItr = await extractVerifiedContent(cidPath, carStream, { rangeStart: 25, rangeEnd: 49 })
+    const buffer = await concatChunks(contentItr)
+    const actualContent = Buffer.from(buffer).toString('base64')
+
+    // To get this value:
+    // $ mkdir -p outdir && car x -f multi_block.car outdir
+    // $ dd status=none if=outdir/unknown of=/dev/stdout bs=1 skip=25 count=25 | base64
+    const expectedContent = '6uhWxdSJTdQ9PilKs14dZUrANtlx/+rqIw=='
+
+    assert.strictEqual(actualContent, expectedContent)
+  })
+
   it('should verify intermediate path segments', async () => {
     const cidPath =
       'bafybeigeqgfwhivuuxgmuvcrrwvs4j3yfzgljssvnuqzokm6uby4fpmwsa/subdir/hello.txt'
