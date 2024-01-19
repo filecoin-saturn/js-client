@@ -23,6 +23,62 @@ describe('CAR Verification', () => {
     assert.strictEqual(actualContent, expectedContent)
   })
 
+  it('should extract content from a valid CAR with a range', async () => {
+    const cidPath =
+      'bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4'
+    const filepath = getFixturePath('hello.car')
+    const carStream = fs.createReadStream(filepath)
+
+    const contentItr = await extractVerifiedContent(cidPath, carStream, {rangeStart: 1, rangeEnd: 3})
+    const buffer = await concatChunks(contentItr)
+    const actualContent = String.fromCharCode(...buffer)
+    const expectedContent = 'ell'
+
+    assert.strictEqual(actualContent, expectedContent)
+  })
+
+  it('should extract content from a valid CAR with a range with only a start', async () => {
+    const cidPath =
+      'bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4'
+    const filepath = getFixturePath('hello.car')
+    const carStream = fs.createReadStream(filepath)
+
+    const contentItr = await extractVerifiedContent(cidPath, carStream, {rangeStart: 1})
+    const buffer = await concatChunks(contentItr)
+    const actualContent = String.fromCharCode(...buffer)
+    const expectedContent = 'ello world\n'
+
+    assert.strictEqual(actualContent, expectedContent)
+  })
+
+  it('should extract content from a valid CAR with a range with a negative end', async () => {
+    const cidPath =
+      'bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4'
+    const filepath = getFixturePath('hello.car')
+    const carStream = fs.createReadStream(filepath)
+
+    const contentItr = await extractVerifiedContent(cidPath, carStream, {rangeStart: 1, rangeEnd: -1})
+    const buffer = await concatChunks(contentItr)
+    const actualContent = String.fromCharCode(...buffer)
+    const expectedContent = 'ello world'
+
+    assert.strictEqual(actualContent, expectedContent)
+  })
+
+  it('should extract content from a valid CAR with a range with a negative start and end', async () => {
+    const cidPath =
+      'bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4'
+    const filepath = getFixturePath('hello.car')
+    const carStream = fs.createReadStream(filepath)
+
+    const contentItr = await extractVerifiedContent(cidPath, carStream, {rangeStart: -5, rangeEnd: -1})
+    const buffer = await concatChunks(contentItr)
+    const actualContent = String.fromCharCode(...buffer)
+    const expectedContent = 'orld'
+
+    assert.strictEqual(actualContent, expectedContent)
+  })
+
   it('should verify intermediate path segments', async () => {
     const cidPath =
       'bafybeigeqgfwhivuuxgmuvcrrwvs4j3yfzgljssvnuqzokm6uby4fpmwsa/subdir/hello.txt'
