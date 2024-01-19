@@ -60,9 +60,9 @@ export class Saturn {
     if (this.reportingLogs && this.hasPerformanceAPI) {
       this._monitorPerformanceBuffer()
     }
+    this._setStorage()
     this.loadNodesPromise = this.config.experimental ? this._loadNodes(this.config) : null
     this.authLimiter = pLimit(1)
-    this._setStorage()
   }
 
   /**
@@ -227,13 +227,8 @@ export class Saturn {
   }
 
   async _setStorage () {
-    const getMemoryStorage = async () => {
-      const memoryStorageFn = memoryStorage()
-      return await memoryStorageFn()
-    }
-
     if (!this.config.storage) {
-      this.storage = await getMemoryStorage()
+      this.storage = await memoryStorage()
       return
     }
 
@@ -241,7 +236,7 @@ export class Saturn {
       const getStorage = this.config.storage
       this.storage = await getStorage()
     } catch (error) {
-      this.storage = await getMemoryStorage()
+      this.storage = await memoryStorage()
     }
   }
 
