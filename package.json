@@ -6,7 +6,7 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "test": "NODE_ENV=development TESTING=true node  --test test/",
+    "test": "NODE_ENV=development TESTING=true node  --test test/*",
     "build": "webpack --mode production",
     "prepack": "npm run build"
   },
