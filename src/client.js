@@ -639,13 +639,11 @@ export class Saturn {
     // if storage returns first, update based on cached storage.
     if (nodes === await cacheNodesListPromise) {
       this.nodes = nodes
-      this.hashring = nodes && this.createHashring(nodes)
     }
     // we always want to update from the orchestrator regardless.
     nodes = await orchNodesListPromise
     nodes = this._sortNodes(nodes)
     this.nodes = nodes
     this.storage.set(Saturn.nodesListKey, nodes)
-    this.hashring = this.createHashring(nodes)
   }
 }
