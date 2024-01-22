@@ -36,7 +36,7 @@ export class Saturn {
    * @param {number} [config.fallbackLimit]
    * @param {boolean} [config.experimental]
    * @param {string}  [config.format]
-   * @param {import('./storage/index.js').Storage} [config.storage]
+   * @param {function():Promise<import('./index.js').Storage>} [config.storage]
    */
   constructor (config = {}) {
     this.config = Object.assign({}, {
@@ -60,7 +60,7 @@ export class Saturn {
     if (this.reportingLogs && this.hasPerformanceAPI) {
       this._monitorPerformanceBuffer()
     }
-    this.storage = this.config.storage || memoryStorage()
+    this._setStorage()
     this.loadNodesPromise = this.config.experimental ? this._loadNodes(this.config) : null
     this.authLimiter = pLimit(1)
   }
@@ -224,6 +224,20 @@ export class Saturn {
     }
 
     return { res, controller, log }
+  }
+
+  async _setStorage () {
+    if (!this.config.storage) {
+      this.storage = await memoryStorage()
+      return
+    }
+
+    try {
+      const getStorage = this.config.storage
+      this.storage = await getStorage()
+    } catch (error) {
+      this.storage = await memoryStorage()
+    }
   }
 
   /**
@@ -607,10 +621,10 @@ export class Saturn {
   async _loadNodes (opts) {
     let origin = opts.orchURL
 
-    let cacheNodesListPromise
-    if (this.storage) {
-      cacheNodesListPromise = this.storage.get(Saturn.nodesListKey)
+    if (!this.storage) {
+      await this._setStorage()
     }
+    const cacheNodesListPromise = this.storage?.get(Saturn.nodesListKey)
 
     origin = addHttpPrefix(origin)
 
@@ -645,7 +659,7 @@ export class Saturn {
     nodes = await orchNodesListPromise
     nodes = this._sortNodes(nodes)
     this.nodes = nodes
-    this.storage.set(Saturn.nodesListKey, nodes)
+    this.storage?.set(Saturn.nodesListKey, nodes)
     this.hashring = this.createHashring(nodes)
   }
 }

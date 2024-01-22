@@ -2,9 +2,9 @@
 
 /**
  * @function memoryStorage
- * @returns {import('./index.js').Storage}
+ * @returns {Promise<import('./index.js').Storage>}
  */
-export function memoryStorage () {
+export async function memoryStorage () {
   const storageObject = {}
 
   return {
