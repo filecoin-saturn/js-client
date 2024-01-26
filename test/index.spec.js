@@ -1,11 +1,19 @@
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { describe, it, before, after } from 'node:test'
-import { getMockServer, mockJWT, MSW_SERVER_OPTS } from './test-utils.js'
+import {
+  getMockServer,
+  mockJWT,
+  mockOriginHandler,
+  MSW_SERVER_OPTS
+} from './test-utils.js'
 import { Saturn } from '#src/index.js'
 
 const TEST_CID = 'QmXjYBY478Cno4jzdCcPy4NcJYFrwHZ51xaCP8vUwN9MGm'
-const TEST_AUTH = 'https://fz3dyeyxmebszwhuiky7vggmsu0rlkoy.lambda-url.us-west-2.on.aws/'
+const HELLO_CID = 'bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4'
+const TEST_AUTH =
+  'https://fz3dyeyxmebszwhuiky7vggmsu0rlkoy.lambda-url.us-west-2.on.aws/'
+const TEST_ORIGIN_DOMAIN = 'l1s.saturn.test'
 const clientKey = 'abc123'
 
 describe('Saturn client', () => {
@@ -38,10 +46,17 @@ describe('Saturn client', () => {
   })
 
   describe('Fetch a CID', () => {
-    const client = new Saturn({ clientKey, authURL: TEST_AUTH })
+    const client = new Saturn({
+      clientKey,
+      cdnURL: TEST_ORIGIN_DOMAIN,
+      authURL: TEST_AUTH
+    })
+
     const handlers = [
-      mockJWT(TEST_AUTH)
+      mockJWT(TEST_AUTH),
+      mockOriginHandler(TEST_ORIGIN_DOMAIN, 0, false)
     ]
+
     const server = getMockServer(handlers)
 
     before(() => {
@@ -50,10 +65,31 @@ describe('Saturn client', () => {
     after(() => {
       server.close()
     })
+
     it('should fetch test CID', async () => {
       const { res } = await client.fetchCID(TEST_CID)
       assert(res instanceof Response)
     })
+
+    it('should fetch test CID with range', async () => {
+      const opts = {
+        range: {
+          rangeStart: 3,
+          rangeEnd: 7
+        }
+      }
+      const uintArray = await client.fetchContentBuffer(HELLO_CID, opts)
+      const actualContent = Buffer.from(uintArray).toString()
+
+      // CAR content is: "hello world"
+      // To get this value:
+      // $ car gb hello.car bafkreifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4 | cut -c 4-8
+      const expectedContent = 'lo wo'
+
+      assert.strictEqual(actualContent.length, 5)
+      assert.strictEqual(actualContent, expectedContent)
+    })
+  })
 
     it('should fail to fetch non CID', async () => {
       await assert.rejects(client.fetchCID('a'))
