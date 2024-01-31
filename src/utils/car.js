@@ -85,49 +85,70 @@ export async function verifyBlock (cid, bytes) {
 }
 
 /**
- * Verifies and extracts the raw content from a CAR stream.
+ * Verifies a car stream represents a valid IPLD entity and returns it
  *
  * @param {string} cidPath
  * @param {ReadableStream|AsyncIterable} carStream
+ */
+export async function extractVerifiedEntity(cidPath, carStream) {
+  const getter = await CarBlockGetter.fromStream(carStream)
+  return await unixfs.exporter(cidPath, getter)
+}
+
+/**
+ * Extracts raw content of a verified IPLD entity
+ *
+ * @param {unixfs.UnixFSEntry} node
  * @param {import('../types.js').ContentRange} options
  */
-export async function * extractVerifiedContent (cidPath, carStream, options = {}) {
-  const getter = await CarBlockGetter.fromStream(carStream)
-  const node = await unixfs.exporter(cidPath, getter)
-
-  for await (const chunk of contentGenerator(node, options)) {
+export async function * extractVerifiedContent(node, options = {}) {
+  const normalizedRange = normalizeContentRange(node, options)
+  const length = normalizedRange.rangeEnd + 1 - normalizedRange.rangeStart
+  for await (const chunk of node.content({  })) {
     yield chunk
   }
 }
 
 /**
- * 
+ * Returns the request content range normalized to the file size
  * @param {unixfs.UnixFSEntry} node
  * @param {import('../types.js').ContentRange} options
+ * @returns {import('../types.js').ContentRange}
  */
-function contentGenerator(node, options = {}) {
-
+export function normalizeContentRange(node, options = {}) {
   let rangeStart = options.rangeStart ?? 0
   if (rangeStart < 0) {
     rangeStart = rangeStart + Number(node.size)
     if (rangeStart < 0) {
       rangeStart = 0
     }
-
+  } else if (rangeStart > 0) {
+    if (rangeStart >= Number(node.size)) {
+      throw new Error("range start greater than content length")
+    }
   }
+
   if (options.rangeEnd === null || options.rangeEnd === undefined) {
-    return node.content({offset: rangeStart})
+    return {
+      rangeStart,
+      rangeEnd: Number(node.size) - 1
+    }
   }
 
-    let rangeEnd = options.rangeEnd
+  let rangeEnd = options.rangeEnd
+  if (rangeEnd < 0) {
+    rangeEnd = rangeEnd + Number(node.size) - 1
     if (rangeEnd < 0) {
-      rangeEnd = rangeEnd + Number(node.size)
-    } else {
-      rangeEnd = rangeEnd+1
+      throw new Error("range end is too small")
     }
-    const toRead =  rangeEnd - rangeStart
-    if (toRead < 0) {
-      throw new Error("range end must be greater than range start")
+  } else {
+    if (rangeEnd >= Number(node.size)) {
+      rangeEnd = Number(node.size) - 1
     }
-    return node.content({offset: rangeStart, length: toRead})
+  }
+
+  if (rangeEnd - rangeStart < 0) {
+    throw new Error("range end must be greater than or equal to range start")
+  }
+  return { rangeStart, rangeEnd }
 }

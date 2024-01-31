@@ -6,7 +6,7 @@ import { getFixturePath, concatChunks } from './test-utils.js'
 import { CarReader, CarWriter } from '@ipld/car'
 import { CID } from 'multiformats/cid'
 
-import { extractVerifiedContent } from '#src/utils/car.js'
+import { extractVerifiedContent, extractVerifiedEntity } from '../src/index.js'
 
 describe('CAR Verification', () => {
   it('should extract content from a valid CAR', async () => {
@@ -15,7 +15,8 @@ describe('CAR Verification', () => {
     const filepath = getFixturePath('hello.car')
     const carStream = fs.createReadStream(filepath)
 
-    const contentItr = await extractVerifiedContent(cidPath, carStream)
+    const node = await extractVerifiedEntity(cidPath, carStream)
+    const contentItr = extractVerifiedContent(node)
     const buffer = await concatChunks(contentItr)
     const actualContent = String.fromCharCode(...buffer)
     const expectedContent = 'hello world\n'
@@ -29,7 +30,8 @@ describe('CAR Verification', () => {
     const filepath = getFixturePath('hello.car')
     const carStream = fs.createReadStream(filepath)
 
-    const contentItr = await extractVerifiedContent(cidPath, carStream, {rangeStart: 1, rangeEnd: 3})
+    const node = await extractVerifiedEntity(cidPath, carStream)
+    const contentItr = extractVerifiedContent(node, { rangeStart: 1, rangeEnd: 3 })
     const buffer = await concatChunks(contentItr)
     const actualContent = String.fromCharCode(...buffer)
     const expectedContent = 'ell'
@@ -43,7 +45,8 @@ describe('CAR Verification', () => {
     const filepath = getFixturePath('hello.car')
     const carStream = fs.createReadStream(filepath)
 
-    const contentItr = await extractVerifiedContent(cidPath, carStream, {rangeStart: 1})
+    const node = await extractVerifiedEntity(cidPath, carStream)
+    const contentItr = extractVerifiedContent(node, { rangeStart: 1 })
     const buffer = await concatChunks(contentItr)
     const actualContent = String.fromCharCode(...buffer)
     const expectedContent = 'ello world\n'
@@ -57,7 +60,8 @@ describe('CAR Verification', () => {
     const filepath = getFixturePath('hello.car')
     const carStream = fs.createReadStream(filepath)
 
-    const contentItr = await extractVerifiedContent(cidPath, carStream, {rangeStart: 1, rangeEnd: -1})
+    const node = await extractVerifiedEntity(cidPath, carStream)
+    const contentItr = extractVerifiedContent(node, { rangeStart: 1, rangeEnd: -1 })
     const buffer = await concatChunks(contentItr)
     const actualContent = String.fromCharCode(...buffer)
     const expectedContent = 'ello world'
@@ -71,7 +75,8 @@ describe('CAR Verification', () => {
     const filepath = getFixturePath('hello.car')
     const carStream = fs.createReadStream(filepath)
 
-    const contentItr = await extractVerifiedContent(cidPath, carStream, {rangeStart: -5, rangeEnd: -1})
+    const node = await extractVerifiedEntity(cidPath, carStream)
+    const contentItr = extractVerifiedContent(node, {rangeStart: -5, rangeEnd: -1})
     const buffer = await concatChunks(contentItr)
     const actualContent = String.fromCharCode(...buffer)
     const expectedContent = 'orld'
@@ -83,8 +88,8 @@ describe('CAR Verification', () => {
     const cidPath = 'QmStvUMCtXxEb8wRjNSUqWwqHBEDhmnEd5nHp5siV7bm1Z'
     const filepath = getFixturePath('multi_block_filtered.car')
     const carStream = fs.createReadStream(filepath)
-
-    const contentItr = await extractVerifiedContent(cidPath, carStream, { rangeStart: 300, rangeEnd: 349 })
+    const node = await extractVerifiedEntity(cidPath, carStream)
+    const contentItr = extractVerifiedContent(node, { rangeStart: 300, rangeEnd: 349 })
     const buffer = await concatChunks(contentItr)
     const actualContent = Buffer.from(buffer).toString('base64')
 
@@ -102,7 +107,8 @@ describe('CAR Verification', () => {
     const filepath = getFixturePath('subdir.car')
     const carStream = fs.createReadStream(filepath)
 
-    const contentItr = await extractVerifiedContent(cidPath, carStream)
+    const node = await extractVerifiedEntity(cidPath, carStream)
+    const contentItr = extractVerifiedContent(node)
     const buffer = await concatChunks(contentItr)
     const actualContent = String.fromCharCode(...buffer)
     const expectedContent = 'hello world\n'
@@ -116,7 +122,8 @@ describe('CAR Verification', () => {
     const filepath = getFixturePath('dag-cbor-with-identity.car')
     const carStream = fs.createReadStream(filepath)
 
-    const contentItr = await extractVerifiedContent(cidPath, carStream)
+    const node = await extractVerifiedEntity(cidPath, carStream)
+    const contentItr = extractVerifiedContent(node)
     const itr = contentItr[Symbol.asyncIterator]()
     const actualContent = (await itr.next()).value
     const expectedContent = { asdf: 324 }
@@ -130,7 +137,8 @@ describe('CAR Verification', () => {
     const filepath = getFixturePath('dag-cbor-traversal.car')
     const carStream = fs.createReadStream(filepath)
 
-    const contentItr = await extractVerifiedContent(cidPath, carStream)
+    const node = await extractVerifiedEntity(cidPath, carStream)
+    const contentItr = extractVerifiedContent(node)
     const itr = contentItr[Symbol.asyncIterator]()
     const actualContent = (await itr.next()).value
     const expectedContent = { hello: 'this is not a link' }
@@ -144,7 +152,8 @@ describe('CAR Verification', () => {
     const filepath = './fixtures/dag-json-traversal.car'
     const carStream = fs.createReadStream(filepath)
 
-    const contentItr = await extractVerifiedContent(cidPath, carStream)
+    const node = await extractVerifiedEntity(cidPath, carStream)
+    const contentItr = extractVerifiedContent(node)
     const itr = contentItr[Symbol.asyncIterator]()
     const actualContent = (await itr.next()).value
     const expectedContent = { hello: 'this is not a link' }
@@ -169,7 +178,8 @@ describe('CAR Verification', () => {
 
     await assert.rejects(
       async () => {
-        for await (const _ of extractVerifiedContent(cidPath, out)) {}
+        const node = await extractVerifiedEntity(cidPath, out)
+        for await (const _ of extractVerifiedContent(node)) {}
       },
       {
         name: 'VerificationError',
@@ -207,7 +217,8 @@ describe('CAR Verification', () => {
 
     await assert.rejects(
       async () => {
-        for await (const _ of extractVerifiedContent(cidPath, out)) {}
+        const node = await extractVerifiedEntity(cidPath, out)
+        for await (const _ of extractVerifiedContent(node)) {}
       },
       {
         name: 'VerificationError',
