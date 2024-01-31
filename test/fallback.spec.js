@@ -267,9 +267,14 @@ describe('Client Fallback', () => {
     server.listen(MSW_SERVER_OPTS)
     const saturn = new Saturn({ ...options })
 
-    const fetchContentMock = mock.fn(async function * (cidPath, opts) {
-      yield Buffer.from('chunk1')
-      yield Buffer.from('chunk2')
+    const fetchContentMock = mock.fn(async function (cidPath, opts) {
+      const body = async function * () {
+        yield Buffer.from('chunk1')
+        yield Buffer.from('chunk2')
+      }
+      return {
+        body: body()
+      }
     })
     saturn.fetchContent = fetchContentMock
     const content = await saturn.fetchContentWithFallback('some-cid-path')
@@ -295,7 +300,7 @@ describe('Client Fallback', () => {
     server.listen(MSW_SERVER_OPTS)
     const saturn = new Saturn({ ...options })
 
-    const fetchContentMock = mock.fn(async function * (cidPath, opts) { throw new Error('Fetch error') }) // eslint-disable-line
+    const fetchContentMock = mock.fn(async function (cidPath, opts) { throw new Error('Fetch error') }) // eslint-disable-line
     saturn.fetchContent = fetchContentMock
 
     let error
@@ -394,10 +399,13 @@ describe('Client Fallback', () => {
     await saturn.loadNodesPromise
 
     let callCount = 0
-    const fetchContentMock = mock.fn(async function * (cidPath, opts) {
+    const fetchContentMock = mock.fn(async function (cidPath, opts) {
       callCount++
-      yield ''
-      throw new Error('file does not exist')
+      const body = async function * () {
+        yield ''
+        throw new Error('file does not exist')
+      }
+      return { body: body() }
     })
 
     saturn.fetchContent = fetchContentMock
@@ -429,15 +437,19 @@ describe('Client Fallback', () => {
     const saturn = new Saturn({ ...options })
 
     let callCount = 0
-    const fetchContentMock = mock.fn(async function * (cidPath, opts) {
+    const fetchContentMock = mock.fn(async function (cidPath, opts) {
       callCount++
+      let body
       if (callCount === 1) {
         throw new Error('First call error')
       }
       if (callCount === 2) {
-        yield Buffer.from('chunk1-overlap')
-        yield Buffer.from('chunk2')
+        body = async function * () {
+          yield Buffer.from('chuxxnk1-overlap')
+          yield Buffer.from('chunk2')
+        }
       }
+      return { body: body() }
     })
 
     saturn.fetchContent = fetchContentMock
@@ -468,16 +480,22 @@ describe('Client Fallback', () => {
     const saturn = new Saturn({ ...options })
 
     let callCount = 0
-    let fetchContentMock = mock.fn(async function * (cidPath, opts) {
+    let fetchContentMock = mock.fn(async function (cidPath, opts) {
       callCount++
+      let body
       if (callCount === 1) {
-        yield Buffer.from('chunk1-overlap')
-        throw new Error('First call error')
+        body = async function * () {
+          yield Buffer.from('chunk1-overlap')
+          throw new Error('First call error')
+        }
       }
       if (callCount === 2) {
-        yield Buffer.from('chunk1-overlap')
-        yield Buffer.from('chunk2')
+        body = async function * () {
+          yield Buffer.from('chunk1-overlap')
+          yield Buffer.from('chunk2')
+        }
       }
+      return { body: body() }
     })
 
     saturn.fetchContent = fetchContentMock
@@ -492,21 +510,29 @@ describe('Client Fallback', () => {
     assert.strictEqual(fetchContentMock.mock.calls.length, 2)
 
     callCount = 0
-    fetchContentMock = mock.fn(async function * (cidPath, opts) {
+    fetchContentMock = mock.fn(async function (cidPath, opts) {
       callCount++
+      let body
       if (callCount === 1) {
-        yield Buffer.from('chunk1-')
-        throw new Error('First call error')
+        body = async function * () {
+          yield Buffer.from('chunk1-')
+          throw new Error('First call error')
+        }
       }
       if (callCount === 2) {
-        yield Buffer.from('chunk1')
-        yield Buffer.from('-overlap')
-        throw new Error('Second call error')
+        body = async function * () {
+          yield Buffer.from('chunk1')
+          yield Buffer.from('-overlap')
+          throw new Error('Second call error')
+        }
       }
       if (callCount === 3) {
-        yield Buffer.from('chunk1-overlap')
-        yield Buffer.from('chunk2')
+        body = async function * () {
+          yield Buffer.from('chunk1-overlap')
+          yield Buffer.from('chunk2')
+        }
       }
+      return { body: body() }
     })
 
     saturn.fetchContent = fetchContentMock

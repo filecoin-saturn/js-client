@@ -28,6 +28,7 @@
     "@ipld/dag-pb": "^2.1.18",
     "@multiformats/blake2": "^1.0.11",
     "browser-readablestream-to-it": "^2.0.4",
+    "content-range": "^2.0.2",
     "hashring": "^3.2.0",
     "idb": "^7.1.1",
     "ipfs-unixfs-exporter": "https://gitpkg.now.sh/filecoin-saturn/js-ipfs-unixfs/packages/ipfs-unixfs-exporter?build",

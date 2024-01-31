@@ -34,8 +34,16 @@
  * Options for a range request
  *
  * @typedef {object} ContentRange
- * @property {number} [rangeStart]
- * @property {number} [rangeEnd]
+ * @property {number | null } [rangeStart]
+ * @property {number | null } [rangeEnd]
+ */
+
+/**
+ * Response to fetchContent
+ * @typedef {object} Response
+ * @property {number} totalSize
+ * @property {ContentRange | undefined} range
+ * @property {AsyncIterable<Uint8Array>} body
  */
 
 export {}

@@ -3,7 +3,7 @@
 import { CID } from 'multiformats'
 import pLimit from 'p-limit'
 
-import { extractVerifiedContent } from './utils/car.js'
+import { extractVerifiedContent, extractVerifiedEntity, normalizeContentRange } from './utils/car.js'
 import { asAsyncIterable, asyncIteratorToBuffer } from './utils/itr.js'
 import { randomUUID } from './utils/uuid.js'
 import { memoryStorage } from './storage/index.js'
@@ -12,11 +12,13 @@ import { parseUrl, addHttpPrefix } from './utils/url.js'
 import { isBrowserContext } from './utils/runtime.js'
 import HashRing from 'hashring'
 import { isErrorUnavoidable } from './utils/errors.js'
+import { parse as parseRange } from "content-range"
 
 const MAX_NODE_WEIGHT = 100
 /**
  * @typedef {import('./types.js').Node} Node
  * @typedef {import('./types.js').FetchOptions} FetchOptions
+ * @typedef {import('./types.js').Response} Response
  */
 
 export class Saturn {
@@ -250,7 +252,7 @@ export class Saturn {
    *
    * @param {string} cidPath
    * @param {FetchOptions} [opts={}]
-   * @returns {Promise<AsyncIterable<Uint8Array>>}
+   * @returns {Promise<AsyncIterable<Uint8Array>}
    */
   async * fetchContentWithFallback (cidPath, opts = {}) {
     const upstreamController = opts.controller
@@ -276,8 +278,8 @@ export class Saturn {
       }
       let byteCount = 0
       const fetchOptions = Object.assign(opts, options)
-      const byteChunks = await this.fetchContent(cidPath, fetchOptions)
-      for await (const chunk of byteChunks) {
+      const response = await this.fetchContent(cidPath, fetchOptions)
+      for await (const chunk of response.body) {
         // avoid sending duplicate chunks
         if (byteCount < byteCountCheckpoint) {
           // checks for overlapping chunks
@@ -366,9 +368,9 @@ export class Saturn {
    *
    * @param {string} cidPath
    * @param {FetchOptions} [opts={}]
-   * @returns {Promise<AsyncIterable<Uint8Array>>}
+   * @returns {Promise<Response>}
    */
-  async * fetchContent (cidPath, opts = {}) {
+  async fetchContent (cidPath, opts = {}) {
     let res, controller, log
     opts = Object.assign({}, this.config, opts)
 
@@ -386,21 +388,57 @@ export class Saturn {
         yield chunk
       }
     }
+    
+    const self = this
+    async function * withErrorHandling(itr) {
+      return async function * () {
+        try {
+          yield * itr
+        } catch (err) {
+          log.error = err.message
+          controller.abort()
+          throw err
+        } finally {
+          self._finalizeLog(log)
+        }
+      }
+    }
 
     try {
       const itr = metricsIterable(asAsyncIterable(res.body))
+      const self = this
       if (!opts.format) {
-        yield * itr
+        const body = withErrorHandling(itr)
+        let totalSize = parseInt(res.headers.get('Content-Length'))
+        let range
+        if (res.headers.has('Content-Range')) {
+          const parsed = parseRange(res.headers.get('Content-Range'))
+            totalSize = parsed?.size || totalSize
+            range = {
+              rangeStart: parsed?.start,
+              rangeEnd: parsed?.end
+            }          
+        }
+        return {
+          totalSize, range, body 
+        }
       } else {
-        yield * extractVerifiedContent(cidPath, itr, opts.range || {})
+        const node = await extractVerifiedEntity(cidPath, itr)
+        let range
+        if (opts.range) {
+          range = normalizeContentRange(node, opts.range || {})
+        }
+        return {
+          totalSize: Number(node.size),
+          range,
+          body: withErrorHandling(extractVerifiedContent(node, opts.range || {}))
+        }
       }
     } catch (err) {
       log.error = err.message
       controller.abort()
-
-      throw err
-    } finally {
       this._finalizeLog(log)
+      throw err
     }
   }
 
@@ -411,7 +449,8 @@ export class Saturn {
    * @returns {Promise<Uint8Array>}
    */
   async fetchContentBuffer (cidPath, opts = {}) {
-    return await asyncIteratorToBuffer(this.fetchContent(cidPath, opts))
+    const response = await this.fetchContent(cidPath, opts)
+    return await asyncIteratorToBuffer(response.body)
   }
 
   /**
