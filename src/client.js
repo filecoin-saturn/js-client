@@ -476,11 +476,11 @@ export class Saturn {
       return
     }
 
-    const bandwidthLogs = this.hasPerformanceAPI
-      ? this._matchLogsWithPerformanceMetrics(this.logs)
-      : this.logs
-
     try {
+      const bandwidthLogs = this.hasPerformanceAPI
+        ? this._matchLogsWithPerformanceMetrics(this.logs)
+        : this.logs
+
       await fetch(
         this.config.logURL,
         {
