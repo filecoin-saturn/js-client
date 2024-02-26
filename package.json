@@ -1,12 +1,12 @@
 {
   "name": "@filecoin-saturn/js-client",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "Filecoin Saturn Client",
   "homepage": "https://github.com/filecoin-saturn/js-client",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "test": "NODE_ENV=development TESTING=true node  --test test/",
+    "test": "NODE_ENV=development TESTING=true node  --test test/*",
     "build": "webpack --mode production",
     "prepack": "npm run build"
   },

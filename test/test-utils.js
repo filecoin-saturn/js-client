@@ -44,7 +44,7 @@ export function generateNodes (count, originDomain) {
 }
 
 /**
- * Generates a mock handler to mimick Saturn's orchestrator /nodes endpoint.
+ * Generates a mock handler to mimick an L1 node.
  *
  * @param {string} originUrl - originUrl
  * @param {number} delay - request delay in ms
