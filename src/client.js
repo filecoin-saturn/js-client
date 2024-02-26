@@ -480,13 +480,15 @@ export class Saturn {
       ? this._matchLogsWithPerformanceMetrics(this.logs)
       : this.logs
 
-    await fetch(
-      this.config.logURL,
-      {
-        method: 'POST',
-        body: JSON.stringify({ bandwidthLogs, logSender: this.config.logSender })
-      }
-    )
+    try {
+      await fetch(
+        this.config.logURL,
+        {
+          method: 'POST',
+          body: JSON.stringify({ bandwidthLogs, logSender: this.config.logSender })
+        }
+      )
+    } catch (e) {}
 
     this.logs = []
     this._clearPerformanceBuffer()
