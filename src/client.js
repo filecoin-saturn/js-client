@@ -476,20 +476,26 @@ export class Saturn {
       return
     }
 
-    const bandwidthLogs = this.hasPerformanceAPI
-      ? this._matchLogsWithPerformanceMetrics(this.logs)
-      : this.logs
+    try {
+      const bandwidthLogs = this.hasPerformanceAPI
+        ? this._matchLogsWithPerformanceMetrics(this.logs)
+        : this.logs
 
-    await fetch(
-      this.config.logURL,
-      {
-        method: 'POST',
-        body: JSON.stringify({ bandwidthLogs, logSender: this.config.logSender })
-      }
-    )
+      await fetch(
+        this.config.logURL,
+        {
+          method: 'POST',
+          body: JSON.stringify({ bandwidthLogs, logSender: this.config.logSender })
+        }
+      )
+    } catch (e) {
+      console.log(e)
+      throw e
+    } finally {
+      this.logs = []
+      this._clearPerformanceBuffer()
+    }
 
-    this.logs = []
-    this._clearPerformanceBuffer()
   }
 
   /**
