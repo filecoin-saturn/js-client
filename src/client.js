@@ -488,10 +488,14 @@ export class Saturn {
           body: JSON.stringify({ bandwidthLogs, logSender: this.config.logSender })
         }
       )
-    } catch (e) {}
+    } catch (e) {
+      console.log(e)
+      throw e
+    } finally {
+      this.logs = []
+      this._clearPerformanceBuffer()
+    }
 
-    this.logs = []
-    this._clearPerformanceBuffer()
   }
 
   /**
