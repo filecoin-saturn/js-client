@@ -42,9 +42,9 @@ export class Saturn {
     this.config = Object.assign({}, {
       clientId: randomUUID(),
       cdnURL: 'l1s.saturn.ms',
-      logURL: 'https://twb3qukm2i654i3tnvx36char40aymqq.lambda-url.us-west-2.on.aws/',
+      logURL: 'https://25y6y3tobkpa3thvn5wvu6kgsa0wzhdk.lambda-url.us-west-2.on.aws/',
       orchURL: 'https://orchestrator.strn.pl/nodes?maxNodes=100',
-      authURL: 'https://su4hesnyinnwvtk3h2rkauh5ja0qrisq.lambda-url.us-west-2.on.aws/',
+      authURL: 'https://vitpjzguzvhywfjfg4argkmpvm0dksap.lambda-url.us-west-2.on.aws/',
       format: 'car',
       fallbackLimit: 5,
       connectTimeout: 5_000,
@@ -392,7 +392,7 @@ export class Saturn {
       if (!opts.format) {
         yield * itr
       } else {
-        yield * extractVerifiedContent(cidPath, itr)
+        yield * extractVerifiedContent(cidPath, itr, opts.range || {})
       }
     } catch (err) {
       log.error = err.message
@@ -422,6 +422,7 @@ export class Saturn {
    * @param {string} [opts.format]
    * @param {string} [opts.originFallback]
    * @param {object} [opts.jwt]
+   * @param {import('./types.js').ContentRange} [opts.range]
    * @returns {URL}
    */
   createRequestURL (cidPath, opts = {}) {
@@ -442,6 +443,11 @@ export class Saturn {
       url.searchParams.set('jwt', opts.jwt)
     }
 
+    if (typeof opts.range === 'object' && (opts.range.rangeStart || opts.range.rangeEnd)) {
+      const rangeStart = opts.range.rangeStart?.toString() || '0'
+      const rangeEnd = opts.range.rangeEnd?.toString() || '*'
+      url.searchParams.set('entity-bytes', rangeStart + ':' + rangeEnd)
+    }
     return url
   }
 
@@ -470,21 +476,26 @@ export class Saturn {
       return
     }
 
-    const bandwidthLogs = this.hasPerformanceAPI
-      ? this._matchLogsWithPerformanceMetrics(this.logs)
-      : this.logs
+    try {
+      const bandwidthLogs = this.hasPerformanceAPI
+        ? this._matchLogsWithPerformanceMetrics(this.logs)
+        : this.logs
 
-    await fetch(
-      this.config.logURL,
-      {
-        method: 'POST',
-        body: JSON.stringify({ bandwidthLogs, logSender: this.config.logSender })
-      }
-    )
-
-    this.onReportLogs(bandwidthLogs)
-    this.logs = []
-    this._clearPerformanceBuffer()
+      await fetch(
+        this.config.logURL,
+        {
+          method: 'POST',
+          body: JSON.stringify({ bandwidthLogs, logSender: this.config.logSender })
+        }
+      )
+      this.onReportLogs(bandwidthLogs)
+    } catch (e) {
+      console.log(e)
+      throw e
+    } finally {
+      this.logs = []
+      this._clearPerformanceBuffer()
+    }
   }
 
   /**
@@ -642,13 +653,11 @@ export class Saturn {
     // if storage returns first, update based on cached storage.
     if (nodes === await cacheNodesListPromise) {
       this.nodes = nodes
-      this.hashring = nodes && this.createHashring(nodes)
     }
     // we always want to update from the orchestrator regardless.
     nodes = await orchNodesListPromise
     nodes = this._sortNodes(nodes)
     this.nodes = nodes
     this.storage.set(Saturn.nodesListKey, nodes)
-    this.hashring = this.createHashring(nodes)
   }
 }
