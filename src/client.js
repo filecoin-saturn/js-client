@@ -482,9 +482,18 @@ export class Saturn {
       }
     )
 
+    this.onReportLogs(bandwidthLogs)
     this.logs = []
     this._clearPerformanceBuffer()
   }
+
+  /**
+   * Overwrite this function to handle logs yourself in addition to the
+   * Saturn pipeline.
+   *
+   * @param {Array<object>} logs
+   */
+  onReportLogs (logs) {}
 
   /**
    *
