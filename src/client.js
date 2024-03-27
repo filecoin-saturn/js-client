@@ -490,7 +490,7 @@ export class Saturn {
           body: JSON.stringify({ bandwidthLogs, logSender: this.config.logSender })
         }
       )
-      this.config.onReportLogs(bandwidthLogs)
+      this.onReportLogs(bandwidthLogs)
     } catch (e) {
       console.log(e)
       throw e
