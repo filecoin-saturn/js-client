@@ -36,6 +36,7 @@ export class Saturn {
    * @param {number} [config.fallbackLimit]
    * @param {boolean} [config.experimental]
    * @param {string}  [config.format]
+   * @param {Function} [config.onReportLogs]
    * @param {import('./storage/index.js').Storage} [config.storage]
    */
   constructor (config = {}) {
@@ -61,6 +62,7 @@ export class Saturn {
       this._monitorPerformanceBuffer()
     }
     this.storage = this.config.storage || memoryStorage()
+    this.onReportLogs = this.config.onReportLogs || ((_logs) => {})
     this.loadNodesPromise = this.config.experimental ? this._loadNodes(this.config) : null
     this.authLimiter = pLimit(1)
   }
@@ -488,7 +490,7 @@ export class Saturn {
           body: JSON.stringify({ bandwidthLogs, logSender: this.config.logSender })
         }
       )
-      this.onReportLogs(bandwidthLogs)
+      this.config.onReportLogs(bandwidthLogs)
     } catch (e) {
       console.log(e)
       throw e
@@ -497,14 +499,6 @@ export class Saturn {
       this._clearPerformanceBuffer()
     }
   }
-
-  /**
-   * Overwrite this function to handle logs yourself in addition to the
-   * Saturn pipeline.
-   *
-   * @param {Array<object>} logs
-   */
-  onReportLogs (logs) {}
 
   /**
    *
