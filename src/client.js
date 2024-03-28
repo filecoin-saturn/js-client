@@ -65,6 +65,7 @@ export class Saturn {
     this.onReportLogs = this.config.onReportLogs || ((_logs) => {})
     this.loadNodesPromise = this.config.experimental ? this._loadNodes(this.config) : null
     this.authLimiter = pLimit(1)
+    this.logsLastReportedAt = null
   }
 
   /**
@@ -469,8 +470,15 @@ export class Saturn {
   reportLogs (log) {
     this.logs.push(log)
     if (!this.reportingLogs) return
-    this.reportLogsTimeout && clearTimeout(this.reportLogsTimeout)
-    this.reportLogsTimeout = setTimeout(this._reportLogs.bind(this), 3_000)
+    clearTimeout(this.reportLogsTimeout)
+    if (
+      !this.logsLastReportedAt ||
+      this.logsLastReportedAt.getTime() < new Date().getTime() - 10_000
+    ) {
+      this._reportLogs()
+    } else {
+      this.reportLogsTimeout = setTimeout(this._reportLogs.bind(this), 3_000)
+    }
   }
 
   async _reportLogs () {
@@ -490,6 +498,7 @@ export class Saturn {
           body: JSON.stringify({ bandwidthLogs, logSender: this.config.logSender })
         }
       )
+      this.logsLastReportedAt = new Date()
       this.onReportLogs(bandwidthLogs)
     } catch (e) {
       console.log(e)
