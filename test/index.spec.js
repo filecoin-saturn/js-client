@@ -91,7 +91,8 @@ describe('Saturn client', () => {
 
     it('should create a log on fetch success', async () => {
       client.reportingLogs = true
-      for await (const _ of client.fetchContent(HELLO_CID)) {} // eslint-disable-line
+      const response = await client.fetchContent(HELLO_CID)
+      for await (const _ of response.body) {} // eslint-disable-line
 
       const log = client.logs.pop()
 
