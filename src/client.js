@@ -526,7 +526,7 @@ export class Saturn {
     // It's a good enough heuristic.
     const entry = performance
       .getEntriesByType('resource')
-      .find((r) => r.name === log.url.href)
+      .find((r) => r.name === log.url?.href)
 
     if (entry) {
       const dnsStart = entry.domainLookupStart
